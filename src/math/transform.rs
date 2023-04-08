@@ -1,7 +1,10 @@
+use std::fmt::Display;
+
 use {
   super::{phantom::*, *},
   crate::ray::*,
   nalgebra as na,
+  serde::{Deserialize, Serialize},
   std::ops
 };
 
@@ -11,7 +14,7 @@ type Matrix<const D: usize> = na::SMatrix<Float, D, D>;
 // structures, particularly directions and surface normals, are affected. Replace the matrices
 // below with this, which will allow us to optimize out a lot of the unnecessary normalize calls in
 // place of fast_normalize calls.
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct Transform<In: Space<3>, Out: Space<3>> {
   t: Matrix<4>,
   t_inv: Matrix<4>,
@@ -22,6 +25,28 @@ pub struct Transform<In: Space<3>, Out: Space<3>> {
 }
 
 impl<In: Space<3>, Out: Space<3>> Transform<In, Out> {
+  pub fn identity() -> Self {
+    Self {
+      t: Matrix::<4>::identity(),
+      t_inv: Matrix::<4>::identity(),
+      det: 1.0,
+      det_inv: 1.0,
+      _phantom_in: Phantom::new(),
+      _phantom_out: Phantom::new()
+    }
+  }
+
+  pub fn from_raw(t: Matrix<4>) -> Option<Self> {
+    t.try_inverse().map(|t_inv| Self {
+      t,
+      t_inv,
+      det: t.determinant(),
+      det_inv: t_inv.determinant(),
+      _phantom_in: Phantom::new(),
+      _phantom_out: Phantom::new()
+    })
+  }
+
   pub fn into_inverse(self) -> Transform<Out, In> {
     Transform {
       t: self.t_inv,
@@ -64,10 +89,9 @@ impl<In: Space<3>, Out: Space<3>> Transform<In, Out> {
     Direction { inner: na::Unit::new_normalize(d), _phantom: dir._phantom.into_other() }
   }
 
-  pub fn normal(&self, sn: &Normal3<In>) -> Normal3<Out> {
-    let inner = sn.inner.into_inner();
-    let v = na::Vector3::from_homogeneous(self.t_inv.transpose() * inner.to_homogeneous());
-    Normal { inner: na::Unit::new_normalize(v.unwrap()), _phantom: sn._phantom.into_other() }
+  pub fn normal(&self, sn: &Direction3<In>) -> Direction3<Out> {
+    let v = (self.t_inv.transpose() * sn.inner.into_inner().to_homogeneous()).xyz();
+    Direction { inner: na::Unit::new_normalize(v), _phantom: sn._phantom.into_other() }
   }
 
   pub fn ray(&self, ray: &Ray3<In>) -> Ray3<Out> {
@@ -94,10 +118,9 @@ impl<In: Space<3>, Out: Space<3>> Transform<In, Out> {
     Direction { inner: na::Unit::new_normalize(d), _phantom: dir._phantom.into_other() }
   }
 
-  pub fn inverse_normal(&self, sn: &Normal3<Out>) -> Normal3<In> {
-    let inner = sn.inner.into_inner();
-    let v = na::Vector3::from_homogeneous(self.t.transpose() * inner.to_homogeneous());
-    Normal { inner: na::Unit::new_normalize(v.unwrap()), _phantom: sn._phantom.into_other() }
+  pub fn inverse_normal(&self, sn: &Direction3<Out>) -> Direction3<In> {
+    let v = (self.t.transpose() * sn.inner.into_inner().to_homogeneous()).xyz();
+    Direction { inner: na::Unit::new_normalize(v), _phantom: sn._phantom.into_other() }
   }
 
   pub fn inverse_ray(&self, ray: &Ray3<Out>) -> Ray3<In> {
@@ -107,6 +130,10 @@ impl<In: Space<3>, Out: Space<3>> Transform<In, Out> {
       dir: self.inverse_direction(&ray.dir)
     }
   }
+}
+
+impl<In: Space<3>, Out: Space<3>> Display for Transform<In, Out> {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result { write!(f, "{}", self.t) }
 }
 
 impl<In: Space<3>, Middle: Space<3>, Out: Space<3>> ops::Mul<Transform<In, Middle>>
@@ -144,12 +171,6 @@ impl<In: Space<3>, Out: Space<3>> ops::Mul<&Direction3<In>> for &Transform<In, O
   fn mul(self, rhs: &Direction3<In>) -> Self::Output { self.direction(rhs) }
 }
 
-impl<In: Space<3>, Out: Space<3>> ops::Mul<&Normal3<In>> for &Transform<In, Out> {
-  type Output = Normal3<Out>;
-
-  fn mul(self, rhs: &Normal3<In>) -> Self::Output { self.normal(rhs) }
-}
-
 impl<In: Space<3>, Out: Space<3>> ops::Mul<&Ray3<In>> for &Transform<In, Out> {
   type Output = Ray3<Out>;
 
@@ -166,3 +187,67 @@ impl<In: Space<3>, Out: Space<3>> ops::MulAssign for Transform<In, Out> {
 }
 
 pub type LocalToWorld<S> = Transform<S, WorldSpace>;
+
+fn array_to_vec(array: [Float; 3]) -> na::Vector3<Float> {
+  na::vector![array[0], array[1], array[2]]
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(untagged)]
+pub enum MatrixParameters {
+  Translate { translate: [Float; 3] },
+  UniformScale { scale: Float },
+  NonUniformScale { scale: [Float; 3] },
+  AxisAngle { axis: [Float; 3], angle: Float },
+  LookAt { from: [Float; 3], at: [Float; 3], up: [Float; 3] }
+}
+
+impl MatrixParameters {
+  pub fn build_matrix(self) -> na::Matrix4<Float> {
+    match self {
+      MatrixParameters::Translate { translate } => {
+        na::Matrix4::new_translation(&array_to_vec(translate))
+      },
+      MatrixParameters::UniformScale { scale } => na::Matrix4::new_scaling(scale),
+      MatrixParameters::NonUniformScale { scale } => {
+        na::Matrix4::new_nonuniform_scaling(&array_to_vec(scale))
+      },
+      MatrixParameters::AxisAngle { axis, angle } => na::Matrix4::from_axis_angle(
+        &na::Unit::new_normalize(array_to_vec(axis)),
+        angle * PI / 180.0
+      ),
+      MatrixParameters::LookAt { from, at, up } => na::Matrix4::look_at_rh(
+        &array_to_vec(from).into(),
+        &array_to_vec(at).into(),
+        &array_to_vec(up)
+      )
+    }
+  }
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(untagged)]
+pub enum TransformParameters {
+  Single(MatrixParameters),
+  Composed(Vec<MatrixParameters>)
+}
+
+impl TransformParameters {
+  pub fn build_transform<In: Space<3>, Out: Space<3>>(self) -> Transform<In, Out> {
+    let mut matrix = na::Matrix4::identity();
+    match self {
+      TransformParameters::Single(m) => matrix = m.build_matrix(),
+      TransformParameters::Composed(ms) => {
+        for m in ms {
+          matrix = m.build_matrix() * matrix;
+        }
+      },
+    }
+
+    if let Some(transform) = Transform::from_raw(matrix) {
+      transform
+    } else {
+      panic!("Non-invertible transformation specified!")
+    }
+  }
+}

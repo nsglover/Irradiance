@@ -1,7 +1,7 @@
-mod definitions;
+mod common;
 mod phantom;
 mod space;
 mod transform;
 mod vector;
 
-pub use {definitions::*, space::*, transform::*, vector::*};
+pub use {common::*, space::*, transform::*, vector::*};

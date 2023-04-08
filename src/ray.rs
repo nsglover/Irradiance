@@ -1,7 +1,12 @@
-use {crate::math::*, nalgebra as na};
+use {
+  crate::math::*,
+  nalgebra::{Const, ToTypenum},
+  std::fmt::Display
+};
 
+#[derive(Debug, Clone)]
 pub struct Ray<const D: usize, S: Space<D>>
-where na::Const<D>: na::ToTypenum
+where Const<D>: ToTypenum
 {
   pub time_bounds: (Float, Float),
   pub origin: Point<D, S>,
@@ -9,8 +14,12 @@ where na::Const<D>: na::ToTypenum
 }
 
 impl<const D: usize, S: Space<D>> Ray<D, S>
-where na::Const<D>: na::ToTypenum
+where Const<D>: ToTypenum
 {
+  pub fn new(origin: Point<D, S>, dir: Direction<D, S>) -> Self {
+    Self { time_bounds: (0.0, Float::MAX), origin, dir }
+  }
+
   pub fn at_unchecked(&self, t: Float) -> Point<D, S> { self.origin + self.dir * t }
 
   pub fn at(&self, t: Float) -> Option<Point<D, S>> {
@@ -19,6 +28,14 @@ where na::Const<D>: na::ToTypenum
     } else {
       None
     }
+  }
+}
+
+impl<const D: usize, S: Space<D>> Display for Ray<D, S>
+where Const<D>: ToTypenum
+{
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    write!(f, "O: {}, D: {}", self.origin, self.dir)
   }
 }
 
