@@ -12,7 +12,7 @@ impl IntegratorParameters for NormalIntegratorParameters {
   fn build_integrator(
     &self,
     surfaces: Box<dyn SurfaceGroup>
-  ) -> Result<Box<dyn Integrator>, Box<dyn std::error::Error>> {
+  ) -> Result<Box<dyn Integrator + Sync + Send>, Box<dyn std::error::Error>> {
     Ok(Box::new(NormalIntegrator { surfaces }))
   }
 }
@@ -32,3 +32,7 @@ impl Integrator for NormalIntegrator {
     }
   }
 }
+
+unsafe impl Sync for NormalIntegrator {}
+
+unsafe impl Send for NormalIntegrator {}

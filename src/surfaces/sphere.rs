@@ -59,36 +59,44 @@ impl TransformedSurface for SphereSurface {
     let b = 2.0 * Vector3::from(ray.dir).dot(&origin_vec);
     let c = origin_vec.norm_squared() - 1.0;
 
-    let discrim = b * b - 4.0 * c;
-    if discrim < 0.0 {
+    let discriminant = b * b - 4.0 * c;
+    if discriminant < 0.0 {
       return None;
     }
 
-    let q = -0.5 * (if b < 0.0 { b - na::sqrt(discrim) } else { b + na::sqrt(discrim) });
+    let q = -0.5 * (if b < 0.0 { b - na::sqrt(discriminant) } else { b + na::sqrt(discriminant) });
     let mut t1 = q;
     let mut t2 = c / q;
     if t1 > t2 {
       std::mem::swap(&mut t1, &mut t2);
     }
 
-    let t = if t1 < ray.time_bounds.0 { t2 } else { t1 };
+    let p;
+    let t;
+    if let Some(intersection) = ray.at(t1) {
+      t = t1;
+      p = intersection
+    } else if let Some(intersection) = ray.at(t2) {
+      t = t2;
+      p = intersection
+    } else {
+      return None;
+    }
 
-    ray.at(t).map(|p| {
-      let normalized_p = Vector3::from(p).normalize();
+    let normalized_p = Vector3::from(p).normalize();
 
-      let phi = p.inner.y.atan2(p.inner.x);
-      let theta = na::asin(p.inner.z);
-      let u = (phi + PI) / (2.0 * PI);
-      let v = (theta + PI / 2.0) / PI;
+    let phi = p.inner.y.atan2(p.inner.x);
+    let theta = na::asin(p.inner.z);
+    let u = (phi + PI) / (2.0 * PI);
+    let v = (theta + PI / 2.0) / PI;
 
-      HitInfo {
-        hit_time: t,
-        hit_point: Vector3::from(normalized_p).into(),
-        geom_normal: normalized_p,
-        shading_normal: normalized_p,
-        tex_coords: Vector::from_array([u, v]),
-        material: self.material.as_ref()
-      }
+    Some(HitInfo {
+      hit_time: t,
+      hit_point: Vector3::from(normalized_p).into(),
+      geom_normal: normalized_p,
+      shading_normal: normalized_p,
+      tex_coords: Vector::from_array([u, v]),
+      material: self.material.as_ref()
     })
   }
 }

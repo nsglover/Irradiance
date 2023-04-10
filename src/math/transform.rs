@@ -74,7 +74,7 @@ impl<In: Space<3>, Out: Space<3>> Transform<In, Out> {
   pub fn inverse_determinant(&self) -> Float { self.det_inv }
 
   pub fn vector(&self, vector: &Vector3<In>) -> Vector3<Out> {
-    let v = na::Vector3::from_homogeneous(self.t * vector.inner.to_homogeneous()).unwrap();
+    let v = (self.t * vector.inner.to_homogeneous()).xyz();
     Vector { inner: v, _phantom: vector._phantom.into_other() }
   }
 
@@ -85,7 +85,7 @@ impl<In: Space<3>, Out: Space<3>> Transform<In, Out> {
 
   pub fn direction(&self, dir: &Direction3<In>) -> Direction3<Out> {
     let inner = dir.inner.into_inner();
-    let d = na::Vector3::from_homogeneous(self.t * inner.to_homogeneous()).unwrap();
+    let d = (self.t * inner.to_homogeneous()).xyz();
     Direction { inner: na::Unit::new_normalize(d), _phantom: dir._phantom.into_other() }
   }
 
@@ -103,7 +103,7 @@ impl<In: Space<3>, Out: Space<3>> Transform<In, Out> {
   }
 
   pub fn inverse_vector(&self, vector: &Vector3<Out>) -> Vector3<In> {
-    let v = na::Vector3::from_homogeneous(self.t_inv * vector.inner.to_homogeneous()).unwrap();
+    let v = (self.t_inv * vector.inner.to_homogeneous()).xyz();
     Vector { inner: v, _phantom: vector._phantom.into_other() }
   }
 
@@ -114,7 +114,7 @@ impl<In: Space<3>, Out: Space<3>> Transform<In, Out> {
 
   pub fn inverse_direction(&self, dir: &Direction3<Out>) -> Direction3<In> {
     let inner = dir.inner.into_inner();
-    let d = na::Vector3::from_homogeneous(self.t_inv * inner.to_homogeneous()).unwrap();
+    let d = (self.t_inv * inner.to_homogeneous()).xyz();
     Direction { inner: na::Unit::new_normalize(d), _phantom: dir._phantom.into_other() }
   }
 

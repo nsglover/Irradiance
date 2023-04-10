@@ -32,7 +32,7 @@ pub trait TransformedSurface {
 
 impl<T: TransformedSurface + Debug> Surface for T {
   fn world_bounding_box(&self) -> WorldBBox {
-    todo!() // Transform bounding box
+    todo!() // Transform the local bounding box and returning a bounding box of the resulting prism
   }
 
   fn intersect_world_ray(&self, ray: &WorldRay) -> Option<WorldHitInfo> {

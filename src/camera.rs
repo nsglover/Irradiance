@@ -2,7 +2,7 @@ use {
   crate::{
     math::*,
     ray::{Ray, WorldRay},
-    samplers::{uniform_random_in_unit_disc, IndependentSampler}
+    samplers::{uniform_random_in_unit_disc, Sampler}
   },
   nalgebra::ComplexField as na,
   serde::Deserialize
@@ -66,13 +66,16 @@ pub struct Camera {
 }
 
 impl Camera {
-  pub fn generate_ray(&self, mut u: Float, mut v: Float) -> WorldRay {
+  pub fn sample_ray_through_pixel(
+    &self,
+    sampler: &mut dyn Sampler,
+    mut u: Float,
+    mut v: Float
+  ) -> WorldRay {
     u /= self.resolution.0 as Float;
     v /= self.resolution.1 as Float;
 
-    let mut sampler = IndependentSampler::new();
-
-    let disc = uniform_random_in_unit_disc(&mut sampler) * self.aperture_radius;
+    let disc = uniform_random_in_unit_disc(sampler) * self.aperture_radius;
     let origin = Point::from(nalgebra::point![disc.inner.x, disc.inner.y, 0.0]);
     let dir = Point::from(nalgebra::point![
       (u - 0.5) * self.image_plane_size.0,

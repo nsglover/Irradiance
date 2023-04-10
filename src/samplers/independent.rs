@@ -1,21 +1,19 @@
 use {
   super::*,
   crate::math::*,
-  rand::{rngs::ThreadRng, *}
+  rand::{distributions, rngs::StdRng, Rng, SeedableRng}
 };
 
 #[derive(Debug)]
 pub struct IndependentSampler {
-  rng: ThreadRng
+  rng: StdRng
 }
 
 impl IndependentSampler {
-  pub fn new() -> Self { Self { rng: thread_rng() } }
+  pub fn new() -> Self { Self { rng: StdRng::from_seed(rand::thread_rng().gen()) } }
 }
 
 impl Sampler for IndependentSampler {
-  // fn next(&mut self) -> Float { (self.next_non_one() + self.next_non_zero()) / 2.0 }
-
   fn next(&mut self) -> Float { self.rng.sample(distributions::Uniform::new_inclusive(0.0, 1.0)) }
 
   fn next_non_zero(&mut self) -> Float { self.rng.sample(distributions::OpenClosed01) }

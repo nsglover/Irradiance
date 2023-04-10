@@ -8,7 +8,7 @@ pub trait IntegratorParameters: Debug {
   fn build_integrator(
     &self,
     surfaces: Box<dyn SurfaceGroup>
-  ) -> Result<Box<dyn Integrator>, Box<dyn Error>>;
+  ) -> Result<Box<dyn Integrator + Sync + Send>, Box<dyn Error>>;
 }
 
 pub trait Integrator: Debug {
