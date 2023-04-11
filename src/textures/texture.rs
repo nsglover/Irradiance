@@ -3,7 +3,7 @@ use {
   std::fmt::Debug
 };
 
-#[typetag::serde(tag = "type")]
+#[typetag::deserialize(tag = "type")]
 pub trait TextureParameters: Debug {
   fn build_texture(&self) -> Box<dyn Texture>;
 }

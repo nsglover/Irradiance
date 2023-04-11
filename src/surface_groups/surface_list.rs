@@ -10,7 +10,7 @@ use {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SurfaceListParameters {}
 
-#[typetag::serde(name = "list")]
+#[typetag::deserialize(name = "list")]
 impl SurfaceGroupParameters for SurfaceListParameters {
   fn build_surface_group(
     &self,
@@ -30,10 +30,8 @@ impl SurfaceGroup for SurfaceList {
     let mut closest = None;
     for s in &self.surfaces {
       if let Some(hit) = s.intersect_world_ray(&ray) {
-        if hit.hit_time < ray.time_bounds.1 {
-          ray.time_bounds.1 = hit.hit_time;
-          closest = Some(hit);
-        }
+        ray.time_bounds.1 = hit.hit_time;
+        closest = Some(hit);
       }
     }
 

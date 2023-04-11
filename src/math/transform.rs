@@ -9,11 +9,6 @@ use {
 };
 
 type Matrix<const D: usize> = na::SMatrix<Float, D, D>;
-
-// TODO: Add another parameter here for transformation type, which will encode precisely how
-// structures, particularly directions and surface normals, are affected. Replace the matrices
-// below with this, which will allow us to optimize out a lot of the unnecessary normalize calls in
-// place of fast_normalize calls.
 #[derive(Debug, Clone)]
 pub struct Transform<In: Space<3>, Out: Space<3>> {
   t: Matrix<4>,

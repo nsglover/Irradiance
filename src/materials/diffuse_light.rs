@@ -1,17 +1,17 @@
 use {
   super::*,
   crate::{math::Float, samplers::Sampler, surfaces::WorldHitInfo, textures::*},
-  serde::{Deserialize, Serialize}
+  serde::Deserialize
 };
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Deserialize)]
 struct DiffuseLightParameters {
   name: String,
   emit: Box<dyn TextureParameters>,
   intensity: Float
 }
 
-#[typetag::serde(name = "diffuse light")]
+#[typetag::deserialize(name = "diffuse light")]
 impl MaterialParameters for DiffuseLightParameters {
   fn name(&self) -> String { self.name.clone() }
 

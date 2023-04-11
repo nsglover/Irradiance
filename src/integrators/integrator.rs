@@ -3,7 +3,7 @@ use {
   std::{error::Error, fmt::Debug}
 };
 
-#[typetag::serde(tag = "type")]
+#[typetag::deserialize(tag = "type")]
 pub trait IntegratorParameters: Debug {
   fn build_integrator(
     &self,

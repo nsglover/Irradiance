@@ -3,7 +3,7 @@ use {
   std::fmt::Debug
 };
 
-#[typetag::serde(tag = "type")]
+#[typetag::deserialize(tag = "type")]
 pub trait MaterialParameters: Debug {
   fn name(&self) -> String;
 

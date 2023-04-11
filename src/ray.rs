@@ -17,7 +17,7 @@ impl<const D: usize, S: Space<D>> Ray<D, S>
 where Const<D>: ToTypenum
 {
   pub fn new(origin: Point<D, S>, dir: Direction<D, S>) -> Self {
-    Self { time_bounds: (0.0, Float::MAX), origin, dir }
+    Self { time_bounds: (Float::EPSILON, Float::MAX), origin, dir }
   }
 
   pub fn at_unchecked(&self, t: Float) -> Point<D, S> { self.origin + self.dir * t }

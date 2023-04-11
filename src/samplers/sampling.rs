@@ -9,8 +9,8 @@ fn next_samples_map<const N: usize>(
   map: fn(&mut dyn Sampler) -> Float
 ) -> [Float; N] {
   let mut arr = [0.0; N];
-  for i in 0..N {
-    arr[i] = map(s);
+  for i in arr.iter_mut() {
+    *i = map(s);
   }
 
   arr
@@ -24,9 +24,8 @@ where
   Const<D>: ToTypenum
 {
   let mut vec = Vector::zero();
-
-  for i in 0..D {
-    vec[i] = map(s);
+  for i in vec.inner.iter_mut() {
+    *i = map(s);
   }
 
   vec

@@ -1,17 +1,16 @@
-use serde::{Deserialize, Serialize};
-
 use {
   super::*,
-  crate::{math::*, ray::*, samplers::*, surfaces::*, textures::*}
+  crate::{math::*, ray::*, samplers::*, surfaces::*, textures::*},
+  serde::Deserialize
 };
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Deserialize)]
 struct LambertianParameters {
   name: String,
   albedo: Box<dyn TextureParameters>
 }
 
-#[typetag::serde(name = "lambertian")]
+#[typetag::deserialize(name = "lambertian")]
 impl MaterialParameters for LambertianParameters {
   fn name(&self) -> String { self.name.clone() }
 

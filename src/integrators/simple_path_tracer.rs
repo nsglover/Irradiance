@@ -1,15 +1,31 @@
 use {
   super::*,
-  crate::{color::Color, materials::*, ray::*, samplers::*, surface_groups::*}
+  crate::{color::Color, materials::*, ray::*, samplers::*, surface_groups::*},
+  serde::Deserialize
 };
 
-#[derive(Debug)]
-pub struct PathTracerMats<'a> {
-  max_bounces: usize,
-  surfaces: &'a dyn SurfaceGroup
+#[derive(Debug, Deserialize)]
+struct PathTracerParameters {
+  max_bounces: usize
 }
 
-impl PathTracerMats<'_> {
+#[typetag::deserialize(name = "path_tracer_mats")]
+impl IntegratorParameters for PathTracerParameters {
+  fn build_integrator(
+    &self,
+    surfaces: Box<dyn SurfaceGroup>
+  ) -> Result<Box<dyn Integrator + Sync + Send>, Box<dyn std::error::Error>> {
+    Ok(Box::new(SimplePathTracer { max_bounces: self.max_bounces, surfaces }))
+  }
+}
+
+#[derive(Debug)]
+pub struct SimplePathTracer {
+  max_bounces: usize,
+  surfaces: Box<dyn SurfaceGroup>
+}
+
+impl SimplePathTracer {
   // TODO: Convert to a while loop for efficiency
   fn recursive_estimate(
     &self,
@@ -35,13 +51,17 @@ impl PathTracerMats<'_> {
         emitted
       }
     } else {
-      Color::black() // TODO: Return a background environment map
+      Color::black()
     }
   }
 }
 
-impl Integrator for PathTracerMats<'_> {
+impl Integrator for SimplePathTracer {
   fn estimate_radiance(&self, sampler: &mut dyn Sampler, ray: WorldRay) -> Color {
     self.recursive_estimate(sampler, ray, self.max_bounces)
   }
 }
+
+unsafe impl Sync for SimplePathTracer {}
+
+unsafe impl Send for SimplePathTracer {}

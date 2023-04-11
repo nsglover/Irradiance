@@ -6,7 +6,7 @@ use {
   std::{error::Error, fmt::Debug}
 };
 
-#[typetag::serde(tag = "type")]
+#[typetag::deserialize(tag = "type")]
 pub trait SurfaceGroupParameters: Debug {
   fn build_surface_group(
     &self,

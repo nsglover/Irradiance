@@ -19,7 +19,7 @@ pub struct QuadSurfaceParameters {
   material: String
 }
 
-#[typetag::serde(name = "quad")]
+#[typetag::deserialize(name = "quad")]
 impl SurfaceParameters for QuadSurfaceParameters {
   fn build_surface(
     &self,

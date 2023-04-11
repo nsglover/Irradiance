@@ -15,8 +15,8 @@ impl<'a, S: Space<3>> HitInfo<'a, S> {
     HitInfo {
       hit_time: self.hit_time,
       hit_point: tr * &self.hit_point,
-      geom_normal: tr.direction(&self.geom_normal),
-      shading_normal: tr.direction(&self.shading_normal),
+      geom_normal: tr.normal(&self.geom_normal),
+      shading_normal: tr.normal(&self.shading_normal),
       tex_coords: self.tex_coords,
       material: self.material
     }

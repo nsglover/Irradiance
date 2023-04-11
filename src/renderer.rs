@@ -130,7 +130,18 @@ impl Renderer {
             light += integrator.estimate_radiance(&mut integrator_sampler, ray);
           }
 
-          let bytes = (light * inv_spp).to_bytes();
+          // Convert to sRGB, which is the color space expected by the image buffer
+          let mut srgb = light * inv_spp;
+          for c in srgb.inner.iter_mut() {
+            if *c <= 0.0031308 {
+              *c *= 12.92;
+            } else {
+              *c = (1.0 + 0.055) * (*c).powf(1.0 / 2.4) - 0.055;
+            }
+          }
+
+          // Convert the sRGB pixel value into bytes and write to the temporary buffer.
+          let bytes = srgb.to_bytes();
           subimage.put_pixel(x, y, image::Rgb([bytes[0], bytes[1], bytes[2]]));
         }
       }

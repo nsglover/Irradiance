@@ -1,6 +1,5 @@
 use {
   crate::{math::*, wrapper::*},
-  colored::Colorize,
   derive_more::{Add, AddAssign, Div, DivAssign, Mul, MulAssign},
   nalgebra as na,
   serde::{Deserialize, Serialize}
@@ -24,7 +23,7 @@ impl ColorParameters {
 
 #[derive(Debug, Clone, Copy, Add, AddAssign, Mul, MulAssign, Div, DivAssign)]
 pub struct Color {
-  inner: na::Vector3<Float>
+  pub inner: na::Vector3<Float>
 }
 
 impl Color {
@@ -62,19 +61,6 @@ impl Color {
     let b = na::clamp(self.inner.z * 255.0, 0.0, 255.0);
 
     na::Vector3::new(r as u8, g as u8, b as u8)
-  }
-}
-
-impl std::fmt::Display for Color {
-  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-    let bytes = self.to_bytes();
-    let colored_vector = format!("{}", self.inner).color(colored::Color::TrueColor {
-      r: bytes.x,
-      g: bytes.y,
-      b: bytes.z
-    });
-
-    write!(f, "{}", colored_vector)
   }
 }
 

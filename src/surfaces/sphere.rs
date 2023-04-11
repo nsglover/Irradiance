@@ -18,14 +18,14 @@ pub struct SphereSurfaceParameters {
   material: String
 }
 
-#[typetag::serde(name = "sphere")]
+#[typetag::deserialize(name = "sphere")]
 impl SurfaceParameters for SphereSurfaceParameters {
   fn build_surface(
     &self,
     materials: &HashMap<String, Box<dyn MaterialParameters>>
   ) -> Box<dyn Surface> {
-    let scale: LocalToWorld<SphereSpace> =
-      Transform::from_raw(nalgebra::Matrix4::new_scaling(self.radius)).unwrap();
+    let scale_mat = nalgebra::Matrix4::new_scaling(self.radius);
+    let scale: LocalToWorld<_> = Transform::from_raw(scale_mat).unwrap();
 
     Box::new(SphereSurface {
       transform: self.transform.clone().build_transform() * scale,

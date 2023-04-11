@@ -6,15 +6,21 @@
 			"up": [0, 1, 0]
 		},
 		"vfov": 40,
-		"fdist": 800
+		"fdist": 800,
+    "resolution": [512, 512]
 	},
-	"image_samples": 8,
+	"image_samples": 512,
 	"background": [0,0,0],
 	"accelerator":
 	{
 		"_type": "bbh",
     "type": "list"
 	},
+  "integrator":
+  {
+    "type": "path_tracer_mats",
+    "max_bounces": 64
+  },
 	"materials": [
 		{
 			"type": "lambertian",

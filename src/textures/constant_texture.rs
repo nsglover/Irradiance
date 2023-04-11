@@ -11,7 +11,7 @@ pub struct ConstantTextureParameters {
   color: ColorParameters
 }
 
-#[typetag::serde(name = "constant")]
+#[typetag::deserialize(name = "constant")]
 impl TextureParameters for ConstantTextureParameters {
   fn build_texture(&self) -> Box<dyn Texture> {
     Box::new(ConstantTexture { color: self.color.build_color() })

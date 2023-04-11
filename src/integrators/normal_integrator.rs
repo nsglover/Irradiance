@@ -1,13 +1,13 @@
 use {
   super::*,
   crate::{color::Color, ray::WorldRay, samplers::Sampler, surface_groups::SurfaceGroup},
-  serde::{Deserialize, Serialize}
+  serde::Deserialize
 };
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize)]
 pub struct NormalIntegratorParameters;
 
-#[typetag::serde(name = "normals")]
+#[typetag::deserialize(name = "normals")]
 impl IntegratorParameters for NormalIntegratorParameters {
   fn build_integrator(
     &self,
@@ -28,7 +28,7 @@ impl Integrator for NormalIntegrator {
       let n: nalgebra::Unit<_> = hit.shading_normal.into();
       Color::new(n.x.abs(), n.y.abs(), n.z.abs())
     } else {
-      Color::black() // TODO: Return a background environment map
+      Color::black()
     }
   }
 }

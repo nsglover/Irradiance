@@ -6,7 +6,7 @@ use {
   std::{collections::HashMap, fmt::Debug}
 };
 
-#[typetag::serde(tag = "type")]
+#[typetag::deserialize(tag = "type")]
 pub trait SurfaceParameters: Debug {
   fn build_surface(
     &self,

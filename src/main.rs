@@ -20,12 +20,19 @@ mod surfaces;
 mod textures;
 mod wrapper;
 
-// TODO: BVH
-// TODO: Transforms optimization
+// Important Features:
 // TODO: Progress bars
+// TODO: Privatize all the inner members of math structures
+// TODO: BVH
 // TODO: Stratified sampling
 // TODO: Direct lighting MIS
+// TODO: Transforms optimization
+// TODO: Mesh loading and the triangle mesh surface
 // TODO: Environment map
+
+// Side Features:
+// TODO: Perlin noise
+// TODO: Blend material (arbitrary number rather than just 2)
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = Some(""))]
