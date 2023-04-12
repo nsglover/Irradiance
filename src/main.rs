@@ -1,5 +1,3 @@
-#![feature(never_type)]
-
 use {
   clap::Parser,
   std::{error::Error, fs::File, io::BufReader}
@@ -12,7 +10,6 @@ mod color;
 mod integrators;
 mod materials;
 mod math;
-mod ray;
 mod renderer;
 mod samplers;
 mod surface_groups;
@@ -24,9 +21,11 @@ mod wrapper;
 // TODO: Progress bars
 // TODO: Privatize all the inner members of math structures
 // TODO: BVH
+// TODO: Dieletric and metal materials
 // TODO: Stratified sampling
 // TODO: Direct lighting MIS
 // TODO: Transforms optimization
+// TODO: Image loading and image texture interface
 // TODO: Mesh loading and the triangle mesh surface
 // TODO: Environment map
 

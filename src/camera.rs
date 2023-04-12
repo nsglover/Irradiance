@@ -1,10 +1,8 @@
 use {
   crate::{
     math::*,
-    ray::{Ray, WorldRay},
     samplers::{uniform_random_in_unit_disc, Sampler}
   },
-  nalgebra::ComplexField as na,
   serde::Deserialize
 };
 
@@ -37,7 +35,7 @@ impl CameraParameters {
   pub fn build_camera(self) -> Camera {
     let fov = self.field_of_view * PI / 180.0;
     let resolution = self.resolution;
-    let height = 2.0 * na::tan(fov / 2.0) * self.focal_distance;
+    let height = 2.0 * (fov / 2.0).tan() * self.focal_distance;
     let width = ((resolution.0 as Float) / (resolution.1 as Float)) * (height as Float);
     let image_plane_size = (width, height);
 

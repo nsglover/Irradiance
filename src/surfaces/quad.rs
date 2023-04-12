@@ -3,8 +3,7 @@ use {
   crate::{
     bbox::BBox3,
     materials::{Material, MaterialParameters},
-    math::{LocalToWorld, Space, *},
-    ray::Ray3,
+    math::*,
     textures::TextureCoordinates
   },
   nalgebra as na,
@@ -61,11 +60,11 @@ impl TransformedSurface for QuadSurface {
   }
 
   fn intersect_ray(&self, ray: &Ray3<Self::LocalSpace>) -> Option<HitInfo<Self::LocalSpace>> {
-    if ray.dir.inner.z == 0.0 {
+    if ray.dir().inner.z == 0.0 {
       return None;
     }
 
-    let t = -ray.origin.inner.z / ray.dir.inner.z;
+    let t = -ray.origin().inner.z / ray.dir().inner.z;
 
     ray.at(t).and_then(|point| {
       let mut p = point.inner;

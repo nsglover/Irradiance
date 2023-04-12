@@ -3,10 +3,8 @@ use {
   crate::{
     bbox::BBox3,
     materials::{Material, MaterialParameters},
-    math::{LocalToWorld, Space, *},
-    ray::Ray3
+    math::*
   },
-  nalgebra::ComplexField as na,
   serde::{Deserialize, Serialize},
   std::collections::HashMap
 };
@@ -55,8 +53,8 @@ impl TransformedSurface for SphereSurface {
   }
 
   fn intersect_ray(&self, ray: &Ray3<Self::LocalSpace>) -> Option<HitInfo<Self::LocalSpace>> {
-    let origin_vec = Vector3::from(ray.origin);
-    let b = 2.0 * Vector3::from(ray.dir).dot(&origin_vec);
+    let origin_vec = Vector3::from(ray.origin());
+    let b = 2.0 * Vector3::from(ray.dir()).dot(&origin_vec);
     let c = origin_vec.norm_squared() - 1.0;
 
     let discriminant = b * b - 4.0 * c;
@@ -64,7 +62,7 @@ impl TransformedSurface for SphereSurface {
       return None;
     }
 
-    let q = -0.5 * (if b < 0.0 { b - na::sqrt(discriminant) } else { b + na::sqrt(discriminant) });
+    let q = -0.5 * (if b < 0.0 { b - discriminant.sqrt() } else { b + discriminant.sqrt() });
     let mut t1 = q;
     let mut t2 = c / q;
     if t1 > t2 {
@@ -86,7 +84,7 @@ impl TransformedSurface for SphereSurface {
     let normalized_p = Vector3::from(p).normalize();
 
     let phi = p.inner.y.atan2(p.inner.x);
-    let theta = na::asin(p.inner.z);
+    let theta = p.inner.z.asin();
     let u = (phi + PI) / (2.0 * PI);
     let v = (theta + PI / 2.0) / PI;
 

@@ -1,6 +1,6 @@
 use {
   super::*,
-  crate::{color::Color, materials::*, ray::*, samplers::*, surface_groups::*},
+  crate::{color::Color, materials::*, math::*, samplers::*, surface_groups::*},
   serde::Deserialize
 };
 
@@ -9,7 +9,7 @@ struct PathTracerParameters {
   max_bounces: usize
 }
 
-#[typetag::deserialize(name = "path_tracer_mats")]
+#[typetag::deserialize(name = "simple_path_tracer")]
 impl IntegratorParameters for PathTracerParameters {
   fn build_integrator(
     &self,
@@ -26,15 +26,14 @@ pub struct SimplePathTracer {
 }
 
 impl SimplePathTracer {
-  // TODO: Convert to a while loop for efficiency
   fn recursive_estimate(
     &self,
     sampler: &mut dyn Sampler,
-    ray: WorldRay,
+    mut ray: WorldRay,
     remaining_bounces: usize
   ) -> Color {
-    if let Some(hit) = self.surfaces.intersect_world_ray(ray) {
-      let sample = hit.material.sample(&hit, sampler);
+    if let Some(hit) = self.surfaces.intersect_world_ray(&mut ray) {
+      let sample = hit.material.sample(&hit, &ray, sampler);
       let emitted = sample.emission.unwrap_or(Color::black());
       if remaining_bounces == 0 {
         return emitted;
@@ -46,7 +45,8 @@ impl SimplePathTracer {
           rec /= pdf;
         }
 
-        emitted + attenuation * rec
+        let result = emitted + attenuation * rec;
+        result
       } else {
         emitted
       }

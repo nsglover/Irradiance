@@ -2,7 +2,6 @@ use std::fmt::Display;
 
 use {
   super::{phantom::*, *},
-  crate::ray::*,
   nalgebra as na,
   serde::{Deserialize, Serialize},
   std::ops
@@ -92,8 +91,8 @@ impl<In: Space<3>, Out: Space<3>> Transform<In, Out> {
   pub fn ray(&self, ray: &Ray3<In>) -> Ray3<Out> {
     Ray {
       time_bounds: ray.time_bounds,
-      origin: self.point(&ray.origin),
-      dir: self.direction(&ray.dir)
+      origin: self.point(&ray.origin()),
+      dir: self.direction(&ray.dir())
     }
   }
 
@@ -121,8 +120,8 @@ impl<In: Space<3>, Out: Space<3>> Transform<In, Out> {
   pub fn inverse_ray(&self, ray: &Ray3<Out>) -> Ray3<In> {
     Ray {
       time_bounds: ray.time_bounds,
-      origin: self.inverse_point(&ray.origin),
-      dir: self.inverse_direction(&ray.dir)
+      origin: self.inverse_point(&ray.origin()),
+      dir: self.inverse_direction(&ray.dir())
     }
   }
 }

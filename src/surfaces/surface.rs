@@ -2,7 +2,7 @@ use crate::materials::MaterialParameters;
 
 use {
   super::*,
-  crate::{bbox::*, math::*, ray::*},
+  crate::{bbox::*, math::*},
   std::{collections::HashMap, fmt::Debug}
 };
 

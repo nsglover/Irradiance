@@ -1,7 +1,7 @@
 use {
-  super::{SurfaceGroup, SurfaceGroupParameters},
+  super::*,
   crate::{
-    ray::WorldRay,
+    math::*,
     surfaces::{Surface, WorldHitInfo}
   },
   serde::{Deserialize, Serialize}
@@ -26,7 +26,7 @@ pub struct SurfaceList {
 }
 
 impl SurfaceGroup for SurfaceList {
-  fn intersect_world_ray(&self, mut ray: WorldRay) -> Option<WorldHitInfo> {
+  fn intersect_world_ray(&self, ray: &mut WorldRay) -> Option<WorldHitInfo> {
     let mut closest = None;
     for s in &self.surfaces {
       if let Some(hit) = s.intersect_world_ray(&ray) {

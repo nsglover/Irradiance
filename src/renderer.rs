@@ -114,7 +114,7 @@ impl Renderer {
       // Precompute 1 / samples_per_pixel to save some time.
       let inv_spp = 1.0 / (samples_per_pixel as Float);
 
-      // Initialize samplers. TODO: Allow for user-specified samplers.
+      // Build samplers for this subimage thread.
       let mut ray_sampler = IndependentSampler::new();
       let mut integrator_sampler = IndependentSampler::new();
 

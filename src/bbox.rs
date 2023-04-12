@@ -1,5 +1,5 @@
 use {
-  crate::{math::*, ray::Ray},
+  crate::math::*,
   nalgebra::{Const, ToTypenum}
 };
 
@@ -41,7 +41,7 @@ where Const<D>: ToTypenum
 
   pub fn ray_intersects(&self, ray: &Ray<D, S>) -> Option<Float> {
     let (mut min_t, mut max_t) = ray.time_bounds;
-    let dir_vec: Vector<D, S> = ray.dir.into();
+    let dir_vec: Vector<D, S> = ray.dir().into();
 
     for i in 0..D {
       if self.min[i] > self.max[i] {
@@ -49,8 +49,8 @@ where Const<D>: ToTypenum
       }
 
       let inv_d = 1.0 / dir_vec[i];
-      let mut t0 = (self.min[i] - ray.origin[i]) * inv_d;
-      let mut t1 = (self.max[i] - ray.origin[i]) * inv_d;
+      let mut t0 = (self.min[i] - ray.origin()[i]) * inv_d;
+      let mut t1 = (self.max[i] - ray.origin()[i]) * inv_d;
 
       if inv_d < 0.0 {
         std::mem::swap(&mut t0, &mut t1);

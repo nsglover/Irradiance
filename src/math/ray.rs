@@ -9,8 +9,8 @@ pub struct Ray<const D: usize, S: Space<D>>
 where Const<D>: ToTypenum
 {
   pub time_bounds: (Float, Float),
-  pub origin: Point<D, S>,
-  pub dir: Direction<D, S>
+  pub(super) origin: Point<D, S>,
+  pub(super) dir: Direction<D, S>
 }
 
 impl<const D: usize, S: Space<D>> Ray<D, S>
@@ -29,6 +29,10 @@ where Const<D>: ToTypenum
       None
     }
   }
+
+  pub fn origin(&self) -> Point<D, S> { self.origin }
+
+  pub fn dir(&self) -> Direction<D, S> { self.dir }
 }
 
 impl<const D: usize, S: Space<D>> Display for Ray<D, S>

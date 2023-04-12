@@ -1,5 +1,5 @@
 use {
-  crate::{color::Color, ray::WorldRay, samplers::Sampler, surface_groups::SurfaceGroup},
+  crate::{color::Color, math::*, samplers::Sampler, surface_groups::SurfaceGroup},
   std::{error::Error, fmt::Debug}
 };
 

@@ -1,7 +1,7 @@
 use {
   super::Sampler,
   crate::math::*,
-  nalgebra::{ComplexField as na, Const, ToTypenum}
+  nalgebra::{Const, ToTypenum}
 };
 
 fn next_samples_map<const N: usize>(
@@ -69,43 +69,39 @@ where
   linear_interpolate(s.next(), v0, v1)
 }
 
-fn random_in_range_open_closed(s: &mut dyn Sampler, inf: Float, max: Float) -> Float {
-  inf + (max - inf) * s.next_non_zero()
+pub fn spherical_to_cartesian<S: Space<3>>(phi: Float, cos_theta: Float) -> Direction3<S> {
+  let sin_theta = (1.0 - cos_theta * cos_theta).sqrt();
+  let x = phi.cos() * sin_theta;
+  let y = -phi.sin() * sin_theta;
+  let z = cos_theta;
+
+  let vec = nalgebra::vector![x, y, z];
+  let mut unit = nalgebra::Unit::new_unchecked(vec);
+  unit.renormalize_fast();
+
+  unit.into()
 }
 
 pub fn uniform_random_in_unit_disc(s: &mut dyn Sampler) -> Vector2 {
-  let r = na::sqrt(s.next());
-  let theta = random_in_range_open_closed(s, 0.0, 2.0 * PI);
-  (r * nalgebra::vector![na::cos(theta), na::sin(theta)]).into()
+  let theta = s.random_in_closed_open(0.0, 2.0 * PI);
+  (s.next().sqrt() * nalgebra::vector![theta.cos(), theta.sin()]).into()
 }
 
 pub fn uniform_random_on_unit_sphere<S: Space<3>>(s: &mut dyn Sampler) -> Direction3<S> {
-  spherical_to_cartesian(
-    na::cos(s.next_non_one() * 2.0 * (std::f64::consts::PI as Float)),
-    2.0 * s.next_non_one() - 1.0
-  )
+  spherical_to_cartesian(s.random_in_closed_open(0.0, 2.0 * PI), s.random_in_closed(-1.0, 1.0))
 }
 
 pub fn uniform_random_on_unit_hemisphere<S: Space<3>>(s: &mut dyn Sampler) -> Direction3<S> {
-  spherical_to_cartesian(
-    na::cos(s.next_non_one() * 2.0 * (std::f64::consts::PI as Float)),
-    s.next_non_one()
-  )
+  spherical_to_cartesian(s.random_in_closed_open(0.0, 2.0 * PI), s.next())
 }
 
 pub fn cosine_random_on_unit_hemisphere<S: Space<3>>(s: &mut dyn Sampler) -> Direction3<S> {
-  spherical_to_cartesian(
-    na::cos(s.next_non_one() * 2.0 * (std::f64::consts::PI as Float)),
-    na::sqrt(s.next_non_one())
-  )
+  spherical_to_cartesian(s.random_in_closed_open(0.0, 2.0 * PI), s.next().sqrt())
 }
 
 pub fn cosine_power_random_on_unit_hemisphere<S: Space<3>>(
   s: &mut dyn Sampler,
   p: Float
 ) -> Direction3<S> {
-  spherical_to_cartesian(
-    na::cos(s.next_non_one() * 2.0 * (std::f64::consts::PI as Float)),
-    na::powf(s.next_non_one(), 1.0 / (p + 1.0))
-  )
+  spherical_to_cartesian(s.random_in_closed_open(0.0, 2.0 * PI), s.next().powf(1.0 / (p + 1.0)))
 }

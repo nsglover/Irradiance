@@ -1,6 +1,6 @@
 use {
   super::*,
-  crate::{math::*, ray::*, samplers::*, surfaces::*, textures::*},
+  crate::{math::*, samplers::*, surfaces::*, textures::*},
   serde::Deserialize
 };
 
@@ -25,10 +25,10 @@ pub struct Lambertian {
 }
 
 impl Material for Lambertian {
-  fn sample(&self, hit: &WorldHitInfo, sampler: &mut dyn Sampler) -> MaterialSample {
-    let scattered: WorldVector = uniform_random_on_unit_sphere(sampler).into();
+  fn sample(&self, hit: &WorldHitInfo, _: &WorldRay, sampler: &mut dyn Sampler) -> MaterialSample {
+    let random: WorldVector = uniform_random_on_unit_sphere(sampler).into();
     let normal: WorldVector = hit.shading_normal.into();
-    let dir = (normal + scattered).normalize();
+    let dir = (normal + random).normalize();
 
     let pdf = Float::max(0.0, dir.dot(&hit.shading_normal) / PI);
     let color = self.albedo.value(hit) * pdf;

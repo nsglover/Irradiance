@@ -6,8 +6,7 @@
 			"up": [0, 1, 0]
 		},
 		"vfov": 40,
-		"fdist": 800,
-    "resolution": [512, 512]
+		"fdist": 800
 	},
 	"image_samples": 512,
 	"background": [0,0,0],
@@ -18,8 +17,8 @@
 	},
   "integrator":
   {
-    "type": "path_tracer_mats",
-    "max_bounces": 64
+    "type": "simple_path_tracer",
+    "max_bounces": 1
   },
 	"materials": [
 		{
@@ -59,44 +58,6 @@
 			"type": "quad",
 			"transform": [
 				{
-					"translate": [0, 0, -277.5]
-				}
-			],
-			"size": [555,555],
-			"material": "white"
-		},
-		{
-			"type": "quad",
-			"transform": [
-				{
-					"axis": [1, 0, 0],
-					"angle": 90
-				},
-				{
-					"translate": [0, 277.5, 0]
-				}
-			],
-			"size": [555,555],
-			"material": "white"
-		},
-		{
-			"type": "quad",
-			"transform": [
-				{
-					"axis": [1, 0, 0],
-					"angle": -90
-				},
-				{
-					"translate": [0, -277.5, 0]
-				}
-			],
-			"size": [555,555],
-			"material": "white"
-		},
-		{
-			"type": "quad",
-			"transform": [
-				{
 					"axis": [0, 1, 0],
 					"angle": 90
 				},
@@ -111,20 +72,6 @@
 			"type": "quad",
 			"transform": [
 				{
-					"axis": [0, 1, 0],
-					"angle": -90
-				},
-				{
-					"translate": [277.5, 0, 0]
-				}
-			],
-			"size": [555,555],
-			"material": "red"
-		},
-		{
-			"type": "quad",
-			"transform": [
-				{
 					"axis": [1, 0, 0],
 					"angle": 90
 				},
@@ -134,18 +81,6 @@
 			],
 			"size": [130,130],
 			"material": "light"
-		},
-		{
-			"type": "sphere",
-			"transform": { "translate": [140,-177.5,100] },
-			"radius": 100,
-			"material": "greensphere"
-		},
-		{
-			"type": "sphere",
-			"transform": { "translate": [-140,-177.5,-100] },
-			"radius": 100,
-			"material": "redsphere"
 		}
 	]
 }
