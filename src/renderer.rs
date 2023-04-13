@@ -10,13 +10,14 @@ use {
     surfaces::SurfaceParameters
   },
   image::{DynamicImage, ImageBuffer, Rgb},
+  indicatif::{MultiProgress, ProgressBar, ProgressDrawTarget, ProgressStyle},
   serde::Deserialize,
   serde_json::Value,
   std::{
     error::Error,
-    sync::{Arc, Mutex}
-  },
-  threadpool::ThreadPool
+    sync::{Arc, Mutex},
+    thread::{self, JoinHandle}
+  }
 };
 
 fn default_materials() -> Vec<Box<dyn MaterialParameters>> { Vec::new() }
@@ -28,7 +29,7 @@ fn default_surface_group() -> Box<dyn SurfaceGroupParameters> { Box::new(Surface
 fn default_integrator() -> Box<dyn IntegratorParameters> { Box::new(NormalIntegratorParameters {}) }
 
 #[derive(Debug, Deserialize)]
-pub struct SceneParameters {
+struct SceneParameters {
   #[serde(alias = "image_samples")]
   pub samples_per_pixel: usize,
 
@@ -48,7 +49,7 @@ pub struct SceneParameters {
   pub integrator_params: Box<dyn IntegratorParameters>
 }
 
-pub fn parse_scene_params(json: Value) -> Result<SceneParameters, Box<dyn Error>> {
+fn parse_scene_params(json: Value) -> Result<SceneParameters, Box<dyn Error>> {
   Ok(serde_json::from_value(json)?)
 }
 
@@ -93,20 +94,20 @@ impl Renderer {
   }
 
   fn async_integrate_subimage(
-    thread_pool: &ThreadPool,
     integrator: &Arc<Box<dyn Integrator + Sync + Send>>,
     camera: &Arc<Camera>,
     samples_per_pixel: usize,
     image_lock: &Arc<Mutex<Image>>,
-    subimage_bounds: ((u32, u32), (u32, u32))
-  ) {
+    subimage_bounds: ((u32, u32), (u32, u32)),
+    maybe_progress_bar: Option<ProgressBar>
+  ) -> JoinHandle<()> {
     // Copy the ARCs.
     let integrator = integrator.clone();
     let camera = camera.clone();
     let image_lock = image_lock.clone();
 
     // Send the render job to the thread pool.
-    thread_pool.execute(move || {
+    thread::spawn(move || {
       // Create a temporary image buffer to render into.
       let ((x_offset, y_offset), (width, height)) = subimage_bounds;
       let mut subimage = Image::new(width, height);
@@ -124,9 +125,12 @@ impl Renderer {
         for y in 0..height {
           let mut light = Color::black();
           for _ in 0..samples_per_pixel {
+            // Generate a slightly jittered ray through pixel (x, y).
             let ray_x = (x_offset + x) as Float + ray_sampler.next();
             let ray_y = (y_offset + y) as Float + ray_sampler.next();
             let ray = camera.sample_ray_through_pixel(&mut ray_sampler, ray_x, ray_y);
+
+            // Add the incoming radiance to our running average.
             light += integrator.estimate_radiance(&mut integrator_sampler, ray);
           }
 
@@ -143,6 +147,9 @@ impl Renderer {
           // Convert the sRGB pixel value into bytes and write to the temporary buffer.
           let bytes = srgb.to_bytes();
           subimage.put_pixel(x, y, image::Rgb([bytes[0], bytes[1], bytes[2]]));
+
+          // Increment the progress bar to count pixel (x, y) as done.
+          maybe_progress_bar.as_ref().map(|progress_bar| progress_bar.inc(1));
         }
       }
 
@@ -153,7 +160,9 @@ impl Renderer {
           image.put_pixel(x_offset + x, y_offset + y, *subimage.get_pixel(x, y));
         }
       }
-    });
+
+      maybe_progress_bar.map(|progress_bar| progress_bar.finish());
+    })
   }
 
   pub fn render_scene(self) -> DynamicImage {
@@ -188,34 +197,65 @@ impl Renderer {
       y_ints = num_intervals + 1;
     }
 
-    // Create thread pool and move all shared data into atomic reference counters.
-    let thread_pool = ThreadPool::new(self.num_threads as usize);
+    // Create thread list and move all shared data into atomic reference counters.
+    let mut join_handles = Vec::with_capacity((num_intervals * num_intervals) as usize);
     let integrator = Arc::new(self.integrator);
     let camera = Arc::new(self.camera);
     let image_lock = Arc::new(Mutex::new(image));
 
-    // For each pair of intervals, spawn a thread to run the integrator on the subimage given by the
-    // Cartesian product of those intervals.
+    // Create a MultiProgressBar to manage each thread's progress bar.
+    let sty = "[{elapsed_precise}/{duration_precise}] {bar:40.cyan/magenta} {percent:<3}% ({len}p)";
+    let maybe_progress_bars_and_style = self.use_progress_bar.then_some((
+      MultiProgress::with_draw_target(ProgressDrawTarget::stdout()),
+      ProgressStyle::with_template(sty).unwrap().progress_chars("##-")
+    ));
+
+    // For each pair of intervals, add a subimage window to a collection.
+    let mut subimage_windows = Vec::new();
     for x_interval in 0..x_ints {
       for y_interval in 0..y_ints {
+        // Compute the subimage window.
         let sub_x = x_interval * x_interval_size;
         let sub_y = y_interval * y_interval_size;
         let sub_width = if x_interval == x_ints - 1 { x_interval_rem } else { x_interval_size };
         let sub_height = if y_interval == y_ints - 1 { y_interval_rem } else { y_interval_size };
 
-        Self::async_integrate_subimage(
-          &thread_pool,
-          &integrator,
-          &camera,
-          self.samples_per_pixel,
-          &image_lock,
-          ((sub_x, sub_y), (sub_width, sub_height))
-        )
+        subimage_windows.push(((sub_x, sub_y), (sub_width, sub_height)));
       }
     }
 
+    // Sort the subimages which will most likely to take the longest to render (i.e. the ones with
+    // the with the most pixels) at the bottom.
+    subimage_windows.sort_by(|(_, (w1, h1)), (_, (w2, h2))| (w1 * h1).cmp(&(w2 * h2)));
+
+    // Spawn all the threads and create progress bars.
+    for subimage_window @ (_, (sub_width, sub_height)) in subimage_windows {
+      // Create a progress bar for tracking each pixel rendered in this subimage.
+      let maybe_progress_bar =
+        maybe_progress_bars_and_style.as_ref().map(|(progress_bars, style)| {
+          let progress_bar = ProgressBar::new((sub_width * sub_height) as u64);
+          progress_bar.set_style(style.clone());
+          progress_bars.add(progress_bar.clone());
+          progress_bar
+        });
+
+      // Spawn the thread
+      join_handles.push(Self::async_integrate_subimage(
+        &integrator,
+        &camera,
+        self.samples_per_pixel,
+        &image_lock,
+        subimage_window,
+        maybe_progress_bar
+      ));
+    }
+
     // Wait for the threads to finish and return the resulting image.
-    thread_pool.join();
+    for join_handle in join_handles {
+      join_handle.join().unwrap();
+    }
+
+    // Return the final image
     Arc::into_inner(image_lock).unwrap().into_inner().unwrap().into()
   }
 }

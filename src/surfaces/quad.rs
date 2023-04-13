@@ -1,7 +1,6 @@
 use {
   super::*,
   crate::{
-    bbox::BBox3,
     materials::{Material, MaterialParameters},
     math::*,
     textures::TextureCoordinates

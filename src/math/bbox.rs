@@ -1,5 +1,5 @@
 use {
-  crate::math::*,
+  super::*,
   nalgebra::{Const, ToTypenum}
 };
 

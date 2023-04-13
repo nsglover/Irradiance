@@ -4,7 +4,6 @@ use {
 };
 
 use renderer::Renderer;
-mod bbox;
 mod camera;
 mod color;
 mod integrators;
@@ -18,7 +17,6 @@ mod textures;
 mod wrapper;
 
 // Important Features:
-// TODO: Progress bars
 // TODO: Privatize all the inner members of math structures
 // TODO: BVH
 // TODO: Dieletric and metal materials
@@ -61,21 +59,22 @@ fn main() -> Result<(), Box<dyn Error>> {
 
   let default_file_name = scene_file.chars().take(scene_file.len() - ".json".len()).collect();
   let file_name = image_file.unwrap_or(default_file_name) + ".png";
-  println!("Image will be saved to \"{file_name}\".");
 
-  let mut time = std::time::Instant::now();
+  println!("Using scene file \"{scene_file}\".");
+  println!("Image will be saved to \"{file_name}\".\n");
 
+  println!("Building scene...");
+  let build_time = std::time::Instant::now();
   let reader = BufReader::new(File::open(scene_file)?);
   let json = serde_json::from_reader(reader)?;
   let renderer = Renderer::build_from_json(json, num_threads, !no_progress_bar)?;
+  println!("Done! Build Time: {} Seconds\n", build_time.elapsed().as_secs_f32());
 
-  println!("Build Time: {} Seconds", time.elapsed().as_secs_f32());
-  time = std::time::Instant::now();
-
+  println!("Rendering scene...");
+  let render_time = std::time::Instant::now();
   let image = renderer.render_scene();
   image.save(file_name)?;
-
-  println!("Render Time: {} Seconds", time.elapsed().as_secs_f32());
+  println!("Done! Render Time: {} Seconds", render_time.elapsed().as_secs_f32());
 
   Ok(())
 }
