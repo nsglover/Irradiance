@@ -1,6 +1,6 @@
 use {
   clap::Parser,
-  std::{error::Error, fs::File, io::BufReader}
+  std::{error::Error, fs::File, io::BufReader, time::Duration}
 };
 
 use renderer::Renderer;
@@ -16,20 +16,25 @@ mod surfaces;
 mod textures;
 mod wrapper;
 
+// Project Features:
+// TODO: Photon mapping
+
 // Important Features:
-// TODO: Privatize all the inner members of math structures
-// TODO: BVH
 // TODO: Dieletric and metal materials
 // TODO: Stratified sampling
 // TODO: Direct lighting MIS
-// TODO: Transforms optimization
-// TODO: Image loading and image texture interface
-// TODO: Mesh loading and the triangle mesh surface
-// TODO: Environment map
+
+// Minor Improvements:
+// TODO: Stop cloning rays so much
+// TODO: Better system for transform inverses
+// TODO: Optimize transform system
 
 // Side Features:
 // TODO: Perlin noise
 // TODO: Blend material (arbitrary number rather than just 2)
+// TODO: Image loading and image texture interface
+// TODO: Mesh loading and the triangle mesh surface
+// TODO: Environment map
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = Some(""))]
@@ -44,6 +49,14 @@ struct Arguments {
 
   #[arg(long)]
   no_progress_bar: bool
+}
+
+fn duration_to_hms(time: &Duration) -> String {
+  let total_seconds = time.as_secs();
+  let s = total_seconds % 60;
+  let m = (total_seconds / 60) % 60;
+  let h = (total_seconds / 60) / 60;
+  format!("{:0>2}:{:0>2}:{:0>2}", h, m, s)
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
@@ -68,13 +81,13 @@ fn main() -> Result<(), Box<dyn Error>> {
   let reader = BufReader::new(File::open(scene_file)?);
   let json = serde_json::from_reader(reader)?;
   let renderer = Renderer::build_from_json(json, num_threads, !no_progress_bar)?;
-  println!("Done! Build Time: {} Seconds\n", build_time.elapsed().as_secs_f32());
+  println!("Done! Build Time: {}\n", duration_to_hms(&build_time.elapsed()));
 
   println!("Rendering scene...");
   let render_time = std::time::Instant::now();
   let image = renderer.render_scene();
   image.save(file_name)?;
-  println!("Done! Render Time: {} Seconds", render_time.elapsed().as_secs_f32());
+  println!("Done! Render Time: {}", duration_to_hms(&render_time.elapsed()));
 
   Ok(())
 }

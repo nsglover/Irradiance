@@ -1,5 +1,5 @@
 use {
-  crate::{color::*, math::*, surfaces::WorldHitInfo},
+  crate::{color::*, math::*},
   std::fmt::Debug
 };
 
@@ -16,5 +16,5 @@ impl Space<2> for TextureSpace {}
 pub type TextureCoordinates = Vector<2, TextureSpace>;
 
 pub trait Texture: Debug {
-  fn value(&self, hit: &WorldHitInfo) -> Color;
+  fn value(&self, hit: &WorldRayIntersection) -> Color;
 }

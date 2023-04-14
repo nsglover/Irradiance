@@ -1,8 +1,5 @@
 use {
-  crate::{
-    math::*,
-    surfaces::{Surface, WorldHitInfo}
-  },
+  crate::{math::*, surfaces::Surface},
   std::{error::Error, fmt::Debug}
 };
 
@@ -15,5 +12,7 @@ pub trait SurfaceGroupParameters: Debug {
 }
 
 pub trait SurfaceGroup: Debug {
-  fn intersect_world_ray(&self, ray: &mut WorldRay) -> Option<WorldHitInfo>;
+  fn num_surfaces(&self) -> usize;
+
+  fn intersect_world_ray(&self, ray: WorldRay) -> Option<WorldRayIntersection>;
 }

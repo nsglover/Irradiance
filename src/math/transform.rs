@@ -3,7 +3,7 @@ use std::fmt::Display;
 use {
   super::{phantom::*, *},
   nalgebra as na,
-  serde::{Deserialize, Serialize},
+  serde::Deserialize,
   std::ops
 };
 
@@ -25,8 +25,8 @@ impl<In: Space<3>, Out: Space<3>> Transform<In, Out> {
       t_inv: Matrix::<4>::identity(),
       det: 1.0,
       det_inv: 1.0,
-      _phantom_in: Phantom::new(),
-      _phantom_out: Phantom::new()
+      _phantom_in: Phantom::default(),
+      _phantom_out: Phantom::default()
     }
   }
 
@@ -36,8 +36,8 @@ impl<In: Space<3>, Out: Space<3>> Transform<In, Out> {
       t_inv,
       det: t.determinant(),
       det_inv: t_inv.determinant(),
-      _phantom_in: Phantom::new(),
-      _phantom_out: Phantom::new()
+      _phantom_in: Phantom::default(),
+      _phantom_out: Phantom::default()
     })
   }
 
@@ -68,60 +68,116 @@ impl<In: Space<3>, Out: Space<3>> Transform<In, Out> {
   pub fn inverse_determinant(&self) -> Float { self.det_inv }
 
   pub fn vector(&self, vector: &Vector3<In>) -> Vector3<Out> {
-    let v = (self.t * vector.inner.to_homogeneous()).xyz();
-    Vector { inner: v, _phantom: vector._phantom.into_other() }
+    (self.t * vector.inner.to_homogeneous()).xyz().into()
   }
 
   pub fn point(&self, point: &Point3<In>) -> Point3<Out> {
-    let p = na::Point3::from_homogeneous(self.t * point.inner.to_homogeneous()).unwrap();
-    Point { inner: p, _phantom: point._phantom.into_other() }
+    na::Point3::from_homogeneous(self.t * point.inner.to_homogeneous()).unwrap().into()
   }
 
   pub fn direction(&self, dir: &Direction3<In>) -> Direction3<Out> {
     let inner = dir.inner.into_inner();
     let d = (self.t * inner.to_homogeneous()).xyz();
-    Direction { inner: na::Unit::new_normalize(d), _phantom: dir._phantom.into_other() }
+    na::Unit::new_normalize(d).into()
   }
 
   pub fn normal(&self, sn: &Direction3<In>) -> Direction3<Out> {
     let v = (self.t_inv.transpose() * sn.inner.into_inner().to_homogeneous()).xyz();
-    Direction { inner: na::Unit::new_normalize(v), _phantom: sn._phantom.into_other() }
+    na::Unit::new_normalize(v).into()
   }
 
   pub fn ray(&self, ray: &Ray3<In>) -> Ray3<Out> {
-    Ray {
-      time_bounds: ray.time_bounds,
-      origin: self.point(&ray.origin()),
-      dir: self.direction(&ray.dir())
+    let dir: Vector3<In> = ray.dir.inner.into_inner().into();
+    let transformed_dir = self.vector(&dir);
+    let time_dilation = transformed_dir.norm();
+
+    Ray3 {
+      max_intersect_time: ray.max_intersect_time * time_dilation,
+      origin: self.point(&ray.origin),
+      dir: na::Unit::new_unchecked((transformed_dir / time_dilation).inner).into()
+    }
+  }
+
+  pub fn ray_intersect<'a, 'b>(
+    &self,
+    ray_intersection: &RayIntersection<'a, In>
+  ) -> RayIntersection<'a, Out> {
+    let ray = &ray_intersection.intersecting_ray;
+    let dir: Vector3<In> = ray.dir.inner.into_inner().into();
+    let transformed_dir = self.vector(&dir);
+    let time_dilation = transformed_dir.norm();
+
+    let transformed_ray = Ray3 {
+      max_intersect_time: ray.max_intersect_time * time_dilation,
+      origin: self.point(&ray.origin),
+      dir: na::Unit::new_unchecked((transformed_dir / time_dilation).inner).into()
+    };
+
+    RayIntersection {
+      intersecting_ray: transformed_ray,
+      intersect_time: ray_intersection.intersect_time * time_dilation,
+      intersect_point: self.point(&ray_intersection.intersect_point),
+      geom_normal: self.normal(&ray_intersection.geom_normal),
+      shading_normal: self.normal(&ray_intersection.shading_normal),
+      tex_coords: ray_intersection.tex_coords,
+      material: ray_intersection.material
     }
   }
 
   pub fn inverse_vector(&self, vector: &Vector3<Out>) -> Vector3<In> {
-    let v = (self.t_inv * vector.inner.to_homogeneous()).xyz();
-    Vector { inner: v, _phantom: vector._phantom.into_other() }
+    (self.t_inv * vector.inner.to_homogeneous()).xyz().into()
   }
 
   pub fn inverse_point(&self, point: &Point3<Out>) -> Point3<In> {
-    let p = na::Point3::from_homogeneous(self.t_inv * point.inner.to_homogeneous()).unwrap();
-    Point { inner: p, _phantom: point._phantom.into_other() }
+    na::Point3::from_homogeneous(self.t_inv * point.inner.to_homogeneous()).unwrap().into()
   }
 
   pub fn inverse_direction(&self, dir: &Direction3<Out>) -> Direction3<In> {
     let inner = dir.inner.into_inner();
     let d = (self.t_inv * inner.to_homogeneous()).xyz();
-    Direction { inner: na::Unit::new_normalize(d), _phantom: dir._phantom.into_other() }
+    na::Unit::new_normalize(d).into()
   }
 
   pub fn inverse_normal(&self, sn: &Direction3<Out>) -> Direction3<In> {
     let v = (self.t.transpose() * sn.inner.into_inner().to_homogeneous()).xyz();
-    Direction { inner: na::Unit::new_normalize(v), _phantom: sn._phantom.into_other() }
+    na::Unit::new_normalize(v).into()
   }
 
   pub fn inverse_ray(&self, ray: &Ray3<Out>) -> Ray3<In> {
-    Ray {
-      time_bounds: ray.time_bounds,
-      origin: self.inverse_point(&ray.origin()),
-      dir: self.inverse_direction(&ray.dir())
+    let dir: Vector3<Out> = ray.dir.inner.into_inner().into();
+    let transformed_dir = self.inverse_vector(&dir);
+    let time_dilation = transformed_dir.norm();
+
+    Ray3 {
+      max_intersect_time: ray.max_intersect_time * time_dilation,
+      origin: self.inverse_point(&ray.origin),
+      dir: na::Unit::new_unchecked((transformed_dir / time_dilation).inner).into()
+    }
+  }
+
+  pub fn inverse_ray_intersect<'a, 'b>(
+    &self,
+    ray_intersection: &RayIntersection<'a, Out>
+  ) -> RayIntersection<'a, In> {
+    let ray = &ray_intersection.intersecting_ray;
+    let dir: Vector3<Out> = ray.dir.inner.into_inner().into();
+    let transformed_dir = self.inverse_vector(&dir);
+    let time_dilation = transformed_dir.norm();
+
+    let transformed_ray = Ray3 {
+      max_intersect_time: ray.max_intersect_time * time_dilation,
+      origin: self.inverse_point(&ray.origin),
+      dir: na::Unit::new_unchecked((transformed_dir / time_dilation).inner).into()
+    };
+
+    RayIntersection {
+      intersecting_ray: transformed_ray,
+      intersect_time: ray_intersection.intersect_time * time_dilation,
+      intersect_point: self.inverse_point(&ray_intersection.intersect_point),
+      geom_normal: self.inverse_normal(&ray_intersection.geom_normal),
+      shading_normal: self.inverse_normal(&ray_intersection.shading_normal),
+      tex_coords: ray_intersection.tex_coords,
+      material: ray_intersection.material
     }
   }
 }
@@ -186,7 +242,7 @@ fn array_to_vec(array: [Float; 3]) -> na::Vector3<Float> {
   na::vector![array[0], array[1], array[2]]
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize)]
 #[serde(untagged)]
 pub enum MatrixParameters {
   Translate { translate: [Float; 3] },
@@ -219,7 +275,7 @@ impl MatrixParameters {
   }
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize)]
 #[serde(untagged)]
 pub enum TransformParameters {
   Single(MatrixParameters),

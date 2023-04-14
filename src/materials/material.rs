@@ -1,5 +1,5 @@
 use {
-  crate::{color::Color, math::*, samplers::Sampler, surfaces::*},
+  crate::{color::Color, math::*, samplers::Sampler},
   std::fmt::Debug
 };
 
@@ -46,6 +46,10 @@ pub enum ReflectionType {
 }
 
 pub trait Material: Debug {
-  fn sample(&self, hit: &WorldHitInfo, ray: &WorldRay, sampler: &mut dyn Sampler)
-    -> MaterialSample;
+  fn sample(
+    &self,
+    hit: &WorldRayIntersection,
+    ray: &WorldRay,
+    sampler: &mut dyn Sampler
+  ) -> MaterialSample;
 }

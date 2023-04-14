@@ -2,10 +2,10 @@ use {
   crate::{math::*, wrapper::*},
   derive_more::{Add, AddAssign, Div, DivAssign, Mul, MulAssign},
   nalgebra as na,
-  serde::{Deserialize, Serialize}
+  serde::Deserialize
 };
 
-#[derive(Clone, Copy, Debug, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, Deserialize)]
 #[serde(untagged)]
 pub enum ColorParameters {
   Array([Float; 3]),
@@ -55,7 +55,7 @@ impl Color {
     self.inner.x * 0.212671 + self.inner.y * 0.715160 + self.inner.z * 0.072169
   }
 
-  pub fn to_bytes(&self) -> na::Vector3<u8> {
+  pub fn bytes(&self) -> na::Vector3<u8> {
     let r = na::clamp(self.inner.x * 255.0, 0.0, 255.0);
     let g = na::clamp(self.inner.y * 255.0, 0.0, 255.0);
     let b = na::clamp(self.inner.z * 255.0, 0.0, 255.0);

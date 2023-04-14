@@ -23,8 +23,8 @@ pub struct NormalIntegrator {
 }
 
 impl Integrator for NormalIntegrator {
-  fn estimate_radiance(&self, _: &mut dyn Sampler, mut ray: WorldRay) -> Color {
-    if let Some(hit) = self.surfaces.intersect_world_ray(&mut ray) {
+  fn estimate_radiance(&self, _: &mut dyn Sampler, ray: WorldRay) -> Color {
+    if let Some(hit) = self.surfaces.intersect_world_ray(ray) {
       let n: nalgebra::Unit<_> = hit.shading_normal.into();
       Color::new(n.x.abs(), n.y.abs(), n.z.abs())
     } else {

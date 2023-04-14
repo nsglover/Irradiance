@@ -2,11 +2,14 @@ use super::TextureParameters;
 
 use {
   super::Texture,
-  crate::color::{Color, ColorParameters},
-  serde::{Deserialize, Serialize}
+  crate::{
+    color::{Color, ColorParameters},
+    math::*
+  },
+  serde::Deserialize
 };
 
-#[derive(Debug, Clone, Copy, Deserialize, Serialize)]
+#[derive(Debug, Clone, Copy, Deserialize)]
 pub struct ConstantTextureParameters {
   color: ColorParameters
 }
@@ -24,5 +27,5 @@ pub struct ConstantTexture {
 }
 
 impl Texture for ConstantTexture {
-  fn value(&self, _: &crate::surfaces::WorldHitInfo) -> Color { self.color }
+  fn value(&self, _: &WorldRayIntersection) -> Color { self.color }
 }

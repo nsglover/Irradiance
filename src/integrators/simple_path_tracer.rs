@@ -29,10 +29,10 @@ impl SimplePathTracer {
   fn recursive_estimate(
     &self,
     sampler: &mut dyn Sampler,
-    mut ray: WorldRay,
+    ray: WorldRay,
     remaining_bounces: usize
   ) -> Color {
-    if let Some(hit) = self.surfaces.intersect_world_ray(&mut ray) {
+    if let Some(hit) = self.surfaces.intersect_world_ray(ray.clone()) {
       let sample = hit.material.sample(&hit, &ray, sampler);
       let emitted = sample.emission.unwrap_or(Color::black());
       if remaining_bounces == 0 {
@@ -45,8 +45,7 @@ impl SimplePathTracer {
           rec /= pdf;
         }
 
-        let result = emitted + attenuation * rec;
-        result
+        emitted + attenuation * rec
       } else {
         emitted
       }

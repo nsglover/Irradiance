@@ -6,11 +6,11 @@ use {
     textures::TextureCoordinates
   },
   nalgebra as na,
-  serde::{Deserialize, Serialize},
+  serde::Deserialize,
   std::collections::HashMap
 };
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Deserialize)]
 pub struct QuadSurfaceParameters {
   transform: TransformParameters,
   size: [Float; 2],
@@ -58,29 +58,29 @@ impl TransformedSurface for QuadSurface {
     BBox3::new(na::point![-0.5, -0.5, 0.0].into(), na::point![0.5, 0.5, 0.0].into())
   }
 
-  fn intersect_ray(&self, ray: &Ray3<Self::LocalSpace>) -> Option<HitInfo<Self::LocalSpace>> {
-    if ray.dir().inner.z == 0.0 {
+  fn intersect_ray(
+    &self,
+    ray: &Ray3<Self::LocalSpace>
+  ) -> Option<RayIntersection<Self::LocalSpace>> {
+    if ray.dir().inner().z == 0.0 {
       return None;
     }
 
-    let t = -ray.origin().inner.z / ray.dir().inner.z;
-
+    let t = -ray.origin().inner().z / ray.dir().inner().z;
     ray.at(t).and_then(|point| {
-      let mut p = point.inner;
+      let mut p = point.inner();
+      p.z = 0.0;
       if 0.5 < p.x || -0.5 > p.x || 0.5 < p.y || -0.5 > p.y {
         return None;
       }
 
-      p.z = 0.0;
+      let normal = Vector3::from(na::vector![0.0, 0.0, 1.0]).normalize();
+      let tex_coords = TextureCoordinates::from(na::vector![p.x + 0.5, p.y + 0.5]);
 
-      let normal: Direction3<QuadSpace> = Vector3::from(na::vector![0.0, 0.0, 1.0]).normalize();
-
-      let tex_coords: TextureCoordinates =
-        TextureCoordinates::from(na::vector![p.x + 0.5, p.y + 0.5]);
-
-      Some(HitInfo {
-        hit_time: t,
-        hit_point: point,
+      Some(RayIntersection {
+        intersecting_ray: ray.clone(),
+        intersect_time: t,
+        intersect_point: p.into(),
         geom_normal: normal,
         shading_normal: normal,
         tex_coords,

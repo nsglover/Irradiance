@@ -4,11 +4,11 @@ use {
     materials::{Material, MaterialParameters},
     math::*
   },
-  serde::{Deserialize, Serialize},
+  serde::Deserialize,
   std::collections::HashMap
 };
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Deserialize)]
 pub struct SphereSurfaceParameters {
   transform: TransformParameters,
   radius: Float,
@@ -51,7 +51,10 @@ impl TransformedSurface for SphereSurface {
     BBox3::new(nalgebra::point![-1.0, -1.0, -1.0].into(), nalgebra::point![1.0, 1.0, 1.0].into())
   }
 
-  fn intersect_ray(&self, ray: &Ray3<Self::LocalSpace>) -> Option<HitInfo<Self::LocalSpace>> {
+  fn intersect_ray(
+    &self,
+    ray: &Ray3<Self::LocalSpace>
+  ) -> Option<RayIntersection<Self::LocalSpace>> {
     let origin_vec = Vector3::from(ray.origin());
     let b = 2.0 * Vector3::from(ray.dir()).dot(&origin_vec);
     let c = origin_vec.norm_squared() - 1.0;
@@ -70,26 +73,27 @@ impl TransformedSurface for SphereSurface {
 
     let p;
     let t;
-    if let Some(intersection) = ray.at(t1) {
+    if let Some(p1) = ray.at(t1) {
       t = t1;
-      p = intersection
-    } else if let Some(intersection) = ray.at(t2) {
+      p = p1
+    } else if let Some(p2) = ray.at(t2) {
       t = t2;
-      p = intersection
+      p = p2
     } else {
       return None;
     }
 
     let normalized_p = Vector3::from(p).normalize();
 
-    let phi = p.inner.y.atan2(p.inner.x);
-    let theta = p.inner.z.asin();
+    let phi = p.inner().y.atan2(p.inner().x);
+    let theta = p.inner().z.asin();
     let u = (phi + PI) / (2.0 * PI);
     let v = (theta + PI / 2.0) / PI;
 
-    Some(HitInfo {
-      hit_time: t,
-      hit_point: Vector3::from(normalized_p).into(),
+    Some(RayIntersection {
+      intersecting_ray: ray.clone(),
+      intersect_time: t,
+      intersect_point: Vector3::from(normalized_p).into(),
       geom_normal: normalized_p,
       shading_normal: normalized_p,
       tex_coords: Vector::from_array([u, v]),

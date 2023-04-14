@@ -8,22 +8,24 @@ use {
 pub struct Ray<const D: usize, S: Space<D>>
 where Const<D>: ToTypenum
 {
-  pub time_bounds: (Float, Float),
+  pub(super) max_intersect_time: Float,
   pub(super) origin: Point<D, S>,
   pub(super) dir: Direction<D, S>
 }
+
+const MIN_INTERSECT_TIME: Float = Float::EPSILON * 16.0;
 
 impl<const D: usize, S: Space<D>> Ray<D, S>
 where Const<D>: ToTypenum
 {
   pub fn new(origin: Point<D, S>, dir: Direction<D, S>) -> Self {
-    Self { time_bounds: (Float::EPSILON, Float::MAX), origin, dir }
+    Self { max_intersect_time: Float::MAX, origin, dir }
   }
 
-  pub fn at_unchecked(&self, t: Float) -> Point<D, S> { self.origin + self.dir * t }
+  fn at_unchecked(&self, t: Float) -> Point<D, S> { self.origin + self.dir * t }
 
   pub fn at(&self, t: Float) -> Option<Point<D, S>> {
-    if self.time_bounds.0 <= t && t <= self.time_bounds.1 {
+    if MIN_INTERSECT_TIME <= t && t <= self.max_intersect_time {
       Some(self.at_unchecked(t))
     } else {
       None
@@ -33,6 +35,10 @@ where Const<D>: ToTypenum
   pub fn origin(&self) -> Point<D, S> { self.origin }
 
   pub fn dir(&self) -> Direction<D, S> { self.dir }
+
+  pub fn time_bounds(&self) -> (Float, Float) { (MIN_INTERSECT_TIME, self.max_intersect_time) }
+
+  pub fn set_max_intersect_time(&mut self, max_time: Float) { self.max_intersect_time = max_time; }
 }
 
 impl<const D: usize, S: Space<D>> Display for Ray<D, S>

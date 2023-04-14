@@ -12,7 +12,9 @@
 	"background": [0,0,0],
 	"accelerator":
 	{
-    "type": "list"
+    "type": "bvh",
+    "max-leaf-prims": 2,
+    "strategy": "random"
 	},
   "integrator":
   {

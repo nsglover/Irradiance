@@ -12,8 +12,16 @@ use {
 pub struct Point<const D: usize, S: Space<D>>
 where na::Const<D>: na::ToTypenum
 {
-  pub inner: na::Point<Float, D>,
-  pub(super) _phantom: Phantom<S>
+  pub(super) inner: na::Point<Float, D>,
+  _phantom: Phantom<S>
+}
+
+impl<const D: usize, S: Space<D>> Point<D, S>
+where na::Const<D>: na::ToTypenum
+{
+  pub fn origin() -> Self { From::from(na::Point::origin()) }
+
+  pub fn inner(&self) -> na::Point<Float, D> { self.inner }
 }
 
 impl<const D: usize, S: Space<D>> std::fmt::Display for Point<D, S>
@@ -33,7 +41,7 @@ where na::Const<D>: na::ToTypenum
 impl<const D: usize, S: Space<D>> From<na::Point<Float, D>> for Point<D, S>
 where na::Const<D>: na::ToTypenum
 {
-  fn from(raw: na::Point<Float, D>) -> Self { Self { inner: raw, _phantom: Phantom::new() } }
+  fn from(raw: na::Point<Float, D>) -> Self { Self { inner: raw, _phantom: Phantom::default() } }
 }
 
 impl<const D: usize, S: Space<D>> From<Point<D, S>> for na::Point<Float, D>
@@ -120,8 +128,8 @@ where na::Const<D>: na::ToTypenum
 pub struct Vector<const D: usize, S: Space<D>>
 where na::Const<D>: na::ToTypenum
 {
-  pub inner: na::SVector<Float, D>,
-  pub(super) _phantom: Phantom<S>
+  pub(super) inner: na::SVector<Float, D>,
+  _phantom: Phantom<S>
 }
 
 impl<const D: usize, S: Space<D>> Vector<D, S>
@@ -147,6 +155,8 @@ where na::Const<D>: na::ToTypenum
   pub fn norm_squared(&self) -> Float { self.inner.norm_squared() }
 
   pub fn dot(&self, other: &Self) -> Float { self.inner.dot(&other.inner) }
+
+  pub fn inner(&self) -> na::SVector<Float, D> { self.inner }
 }
 
 impl<const D: usize, S: Space<D>> std::ops::Add for Vector<D, S>
@@ -192,7 +202,7 @@ where na::Const<D>: na::ToTypenum
 impl<const D: usize, S: Space<D>> From<na::SVector<Float, D>> for Vector<D, S>
 where na::Const<D>: na::ToTypenum
 {
-  fn from(raw: na::SVector<Float, D>) -> Self { Self { inner: raw, _phantom: Phantom::new() } }
+  fn from(raw: na::SVector<Float, D>) -> Self { Self { inner: raw, _phantom: Phantom::default() } }
 }
 
 impl<const D: usize, S: Space<D>> From<Vector<D, S>> for na::SVector<Float, D>
@@ -241,14 +251,16 @@ where na::Const<D>: na::ToTypenum
 pub struct Direction<const D: usize, S: Space<D>>
 where na::Const<D>: na::ToTypenum
 {
-  pub inner: na::Unit<na::SVector<Float, D>>,
-  pub(super) _phantom: Phantom<S>
+  pub(super) inner: na::Unit<na::SVector<Float, D>>,
+  _phantom: Phantom<S>
 }
 
 impl<const D: usize, S: Space<D>> Direction<D, S>
 where na::Const<D>: na::ToTypenum
 {
   pub fn dot(&self, other: &Self) -> Float { self.inner.dot(&other.inner) }
+
+  pub fn inner(&self) -> na::Unit<na::SVector<Float, D>> { self.inner }
 }
 
 impl<const D: usize, S: Space<D>> std::fmt::Display for Direction<D, S>
@@ -263,7 +275,7 @@ impl<const D: usize, S: Space<D>> From<na::Unit<na::SVector<Float, D>>> for Dire
 where na::Const<D>: na::ToTypenum
 {
   fn from(raw: na::Unit<na::SVector<Float, D>>) -> Self {
-    Self { inner: raw, _phantom: Phantom::new() }
+    Self { inner: raw, _phantom: Phantom::default() }
   }
 }
 
@@ -301,10 +313,10 @@ pub type Direction3<S> = Direction<3, S>;
 
 /* #region World Space Structures */
 
-pub type WorldPoint = Point3<WorldSpace>;
+// pub type WorldPoint = Point3<WorldSpace>;
 
 pub type WorldVector = Vector3<WorldSpace>;
 
-pub type WorldDirection = Direction3<WorldSpace>;
+// pub type WorldDirection = Direction3<WorldSpace>;
 
 /* #endregion */

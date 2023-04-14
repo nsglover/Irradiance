@@ -1,3 +1,5 @@
+use crate::surface_groups::BvhParameters;
+
 use {
   crate::{
     camera::*,
@@ -6,7 +8,7 @@ use {
     materials::MaterialParameters,
     math::*,
     samplers::*,
-    surface_groups::{SurfaceGroupParameters, SurfaceListParameters},
+    surface_groups::{PartitionStrategy, SurfaceGroupParameters},
     surfaces::SurfaceParameters
   },
   image::{DynamicImage, ImageBuffer, Rgb},
@@ -24,7 +26,12 @@ fn default_materials() -> Vec<Box<dyn MaterialParameters>> { Vec::new() }
 
 fn default_surfaces() -> Vec<Box<dyn SurfaceParameters>> { Vec::new() }
 
-fn default_surface_group() -> Box<dyn SurfaceGroupParameters> { Box::new(SurfaceListParameters {}) }
+fn default_surface_group() -> Box<dyn SurfaceGroupParameters> {
+  Box::new(BvhParameters {
+    partition_strategy: PartitionStrategy::SurfaceAreaHeuristic,
+    max_leaf_primitives: 2
+  })
+}
 
 fn default_integrator() -> Box<dyn IntegratorParameters> { Box::new(NormalIntegratorParameters {}) }
 
@@ -145,11 +152,13 @@ impl Renderer {
           }
 
           // Convert the sRGB pixel value into bytes and write to the temporary buffer.
-          let bytes = srgb.to_bytes();
+          let bytes = srgb.bytes();
           subimage.put_pixel(x, y, image::Rgb([bytes[0], bytes[1], bytes[2]]));
 
           // Increment the progress bar to count pixel (x, y) as done.
-          maybe_progress_bar.as_ref().map(|progress_bar| progress_bar.inc(1));
+          if let Some(progress_bar) = maybe_progress_bar.as_ref() {
+            progress_bar.inc(1)
+          }
         }
       }
 
@@ -161,7 +170,9 @@ impl Renderer {
         }
       }
 
-      maybe_progress_bar.map(|progress_bar| progress_bar.finish());
+      if let Some(progress_bar) = maybe_progress_bar {
+        progress_bar.finish()
+      }
     })
   }
 
@@ -205,10 +216,12 @@ impl Renderer {
 
     // Create a MultiProgressBar to manage each thread's progress bar.
     let sty = "[{elapsed_precise}/{duration_precise}] {bar:40.cyan/magenta} {percent:<3}% ({len}p)";
-    let maybe_progress_bars_and_style = self.use_progress_bar.then_some((
-      MultiProgress::with_draw_target(ProgressDrawTarget::stdout()),
-      ProgressStyle::with_template(sty).unwrap().progress_chars("##-")
-    ));
+    let maybe_progress_bars_and_style = self.use_progress_bar.then(|| {
+      (
+        MultiProgress::with_draw_target(ProgressDrawTarget::stdout()),
+        ProgressStyle::with_template(sty).unwrap().progress_chars("##-")
+      )
+    });
 
     // For each pair of intervals, add a subimage window to a collection.
     let mut subimage_windows = Vec::new();

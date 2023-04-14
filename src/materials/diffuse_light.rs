@@ -1,6 +1,6 @@
 use {
   super::*,
-  crate::{math::*, samplers::Sampler, surfaces::WorldHitInfo, textures::*},
+  crate::{math::*, samplers::Sampler, textures::*},
   serde::Deserialize
 };
 
@@ -30,7 +30,12 @@ pub struct DiffuseLight {
 }
 
 impl Material for DiffuseLight {
-  fn sample(&self, hit: &WorldHitInfo, ray: &WorldRay, _: &mut dyn Sampler) -> MaterialSample {
+  fn sample(
+    &self,
+    hit: &WorldRayIntersection,
+    ray: &WorldRay,
+    _: &mut dyn Sampler
+  ) -> MaterialSample {
     if ray.dir().dot(&hit.shading_normal) > 0.0 {
       MaterialSample::nothing()
     } else {

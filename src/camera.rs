@@ -74,7 +74,7 @@ impl Camera {
     v /= self.resolution.1 as Float;
 
     let disc = uniform_random_in_unit_disc(sampler) * self.aperture_radius;
-    let origin = Point::from(nalgebra::point![disc.inner.x, disc.inner.y, 0.0]);
+    let origin = Point::from(nalgebra::point![disc.inner().x, disc.inner().y, 0.0]);
     let dir = Point::from(nalgebra::point![
       (u - 0.5) * self.image_plane_size.0,
       (0.5 - v) * self.image_plane_size.1,

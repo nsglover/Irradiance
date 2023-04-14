@@ -13,9 +13,11 @@ impl<S> std::fmt::Debug for Phantom<S> {
 }
 
 impl<S> Phantom<S> {
-  pub fn new() -> Self { Self { _phantom: PhantomData {} } }
+  pub fn into_other<T>(self) -> Phantom<T> { Phantom::default() }
+}
 
-  pub fn into_other<T>(self) -> Phantom<T> { Phantom::new() }
+impl<S> Default for Phantom<S> {
+  fn default() -> Self { Self { _phantom: Default::default() } }
 }
 
 impl<S> ops::Add for Phantom<S> {
