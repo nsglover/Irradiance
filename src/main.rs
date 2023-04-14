@@ -1,9 +1,9 @@
 use {
   clap::Parser,
+  renderer::Renderer,
   std::{error::Error, fs::File, io::BufReader, time::Duration}
 };
 
-use renderer::Renderer;
 mod camera;
 mod color;
 mod integrators;
@@ -23,17 +23,17 @@ mod wrapper;
 // TODO: Dieletric and metal materials
 // TODO: Stratified sampling
 // TODO: Direct lighting MIS
+// TODO: Image loading and image texture
+// TODO: Mesh loading and the triangle mesh surface
 
 // Minor Improvements:
-// TODO: Stop cloning rays so much
+// TODO: Stop cloning rays
 // TODO: Better system for transform inverses
 // TODO: Optimize transform system
 
 // Side Features:
 // TODO: Perlin noise
 // TODO: Blend material (arbitrary number rather than just 2)
-// TODO: Image loading and image texture interface
-// TODO: Mesh loading and the triangle mesh surface
 // TODO: Environment map
 
 #[derive(Parser, Debug)]
@@ -44,8 +44,11 @@ struct Arguments {
   #[arg(short = 'o', long)]
   image_file: Option<String>,
 
+  #[arg(short = 's', long = "sub-img-size")]
+  subimage_edge_length: u32,
+
   #[arg(short = 'j', long = "threads", default_value_t = 1)]
-  num_threads: u16,
+  num_threads: usize,
 
   #[arg(long)]
   no_progress_bar: bool
@@ -59,8 +62,16 @@ fn duration_to_hms(time: &Duration) -> String {
   format!("{:0>2}:{:0>2}:{:0>2}", h, m, s)
 }
 
+#[derive(Debug)]
+pub struct RenderSettings {
+  num_threads: usize,
+  subimage_dimensions: (u32, u32),
+  use_progress_bar: bool
+}
+
 fn main() -> Result<(), Box<dyn Error>> {
-  let Arguments { scene_file, image_file, num_threads, no_progress_bar } = Arguments::parse();
+  let Arguments { scene_file, image_file, subimage_edge_length, num_threads, no_progress_bar } =
+    Arguments::parse();
 
   if num_threads == 0 {
     panic!("At least 1 thread is necessary to run the renderer!");
@@ -80,14 +91,22 @@ fn main() -> Result<(), Box<dyn Error>> {
   let build_time = std::time::Instant::now();
   let reader = BufReader::new(File::open(scene_file)?);
   let json = serde_json::from_reader(reader)?;
-  let renderer = Renderer::build_from_json(json, num_threads, !no_progress_bar)?;
-  println!("Done! Build Time: {}\n", duration_to_hms(&build_time.elapsed()));
+  let renderer = Renderer::build_from_json(json)?;
+  println!("Building complete! Time: {}\n", duration_to_hms(&build_time.elapsed()));
 
   println!("Rendering scene...");
   let render_time = std::time::Instant::now();
-  let image = renderer.render_scene();
+  let image = renderer.render_scene(RenderSettings {
+    num_threads,
+    subimage_dimensions: (subimage_edge_length, subimage_edge_length),
+    use_progress_bar: !no_progress_bar
+  });
   image.save(file_name)?;
-  println!("Done! Render Time: {}", duration_to_hms(&render_time.elapsed()));
+  if no_progress_bar {
+    println!("Rendering complete! Time: {}", duration_to_hms(&render_time.elapsed()));
+  } else {
+    println!("Rendering complete!");
+  }
 
   Ok(())
 }

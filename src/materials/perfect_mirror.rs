@@ -5,26 +5,26 @@ use {
 };
 
 #[derive(Debug, Deserialize)]
-struct DieletricParameters {
+struct MirrorParameters {
   name: String,
   albedo: Box<dyn TextureParameters>
 }
 
 #[typetag::deserialize(name = "dielectric")]
-impl MaterialParameters for DieletricParameters {
+impl MaterialParameters for MirrorParameters {
   fn name(&self) -> String { self.name.clone() }
 
   fn build_material(&self) -> Box<dyn Material> {
-    Box::new(Dieletric { albedo: self.albedo.build_texture() })
+    Box::new(PerfectMirror { albedo: self.albedo.build_texture() })
   }
 }
 
 #[derive(Debug)]
-pub struct Dieletric {
+pub struct PerfectMirror {
   albedo: Box<dyn Texture>
 }
 
-impl Material for Dieletric {
+impl Material for PerfectMirror {
   fn sample(
     &self,
     hit: &WorldRayIntersection,
