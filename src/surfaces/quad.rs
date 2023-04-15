@@ -60,7 +60,7 @@ impl TransformedSurface for QuadSurface {
 
   fn intersect_ray(
     &self,
-    ray: &Ray3<Self::LocalSpace>
+    ray: Ray3<Self::LocalSpace>
   ) -> Option<RayIntersection<Self::LocalSpace>> {
     if ray.dir().inner().z == 0.0 {
       return None;
@@ -78,7 +78,7 @@ impl TransformedSurface for QuadSurface {
       let tex_coords = TextureCoordinates::from(na::vector![p.x + 0.5, p.y + 0.5]);
 
       Some(RayIntersection {
-        intersecting_ray: ray.clone(),
+        ray,
         intersect_time: t,
         intersect_point: p.into(),
         geom_normal: normal,

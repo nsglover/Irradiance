@@ -52,13 +52,11 @@ impl BvhNode {
         BvhNodeType::Leaf(surface_list) => surface_list.intersect_world_ray(ray),
         BvhNodeType::Node(maybe_left, maybe_right) => {
           match (
-            maybe_left.as_ref().map(|left| left.intersect(ray.clone())).flatten(),
-            maybe_right.as_ref().map(|right| right.intersect(ray.clone())).flatten()
+            maybe_left.as_ref().and_then(|left| left.intersect(ray.clone())),
+            maybe_right.as_ref().and_then(|right| right.intersect(ray.clone()))
           ) {
             (None, maybe_hit) | (maybe_hit, None) => {
-              maybe_hit.as_ref().map(|hit| {
-                ray.set_max_intersect_time(hit.intersect_time);
-              });
+              if let Some(hit) = maybe_hit.as_ref() { ray.set_max_intersect_time(hit.intersect_time); }
 
               maybe_hit
             },
@@ -94,7 +92,7 @@ impl BoundingVolumeHierarchy {
 
     let bounding_boxes: Vec<_> = surfaces.iter().map(|s| s.world_bounding_box()).collect();
     let bounding_box = bounding_boxes.iter().fold(WorldBBox::default(), |mut acc, bbox| {
-      acc.enclose_box(&bbox);
+      acc.enclose_box(bbox);
       acc
     });
 

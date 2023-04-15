@@ -98,11 +98,11 @@ impl<In: Space<3>, Out: Space<3>> Transform<In, Out> {
     }
   }
 
-  pub fn ray_intersect<'a, 'b>(
+  pub fn ray_intersect<'a>(
     &self,
     ray_intersection: &RayIntersection<'a, In>
   ) -> RayIntersection<'a, Out> {
-    let ray = &ray_intersection.intersecting_ray;
+    let ray = &ray_intersection.ray;
     let dir: Vector3<In> = ray.dir.inner.into_inner().into();
     let transformed_dir = self.vector(&dir);
     let time_dilation = transformed_dir.norm();
@@ -114,7 +114,7 @@ impl<In: Space<3>, Out: Space<3>> Transform<In, Out> {
     };
 
     RayIntersection {
-      intersecting_ray: transformed_ray,
+      ray: transformed_ray,
       intersect_time: ray_intersection.intersect_time * time_dilation,
       intersect_point: self.point(&ray_intersection.intersect_point),
       geom_normal: self.normal(&ray_intersection.geom_normal),
@@ -155,11 +155,11 @@ impl<In: Space<3>, Out: Space<3>> Transform<In, Out> {
     }
   }
 
-  pub fn inverse_ray_intersect<'a, 'b>(
+  pub fn inverse_ray_intersect<'a>(
     &self,
     ray_intersection: &RayIntersection<'a, Out>
   ) -> RayIntersection<'a, In> {
-    let ray = &ray_intersection.intersecting_ray;
+    let ray = &ray_intersection.ray;
     let dir: Vector3<Out> = ray.dir.inner.into_inner().into();
     let transformed_dir = self.inverse_vector(&dir);
     let time_dilation = transformed_dir.norm();
@@ -171,7 +171,7 @@ impl<In: Space<3>, Out: Space<3>> Transform<In, Out> {
     };
 
     RayIntersection {
-      intersecting_ray: transformed_ray,
+      ray: transformed_ray,
       intersect_time: ray_intersection.intersect_time * time_dilation,
       intersect_point: self.inverse_point(&ray_intersection.intersect_point),
       geom_normal: self.inverse_normal(&ray_intersection.geom_normal),

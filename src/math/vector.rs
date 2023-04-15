@@ -157,6 +157,10 @@ where na::Const<D>: na::ToTypenum
   pub fn dot(&self, other: &Self) -> Float { self.inner.dot(&other.inner) }
 
   pub fn inner(&self) -> na::SVector<Float, D> { self.inner }
+
+  pub fn reflect_about(&self, normal: Direction<D, S>) -> Self {
+    normal * 2.0 * self.dot(&normal.into()) - *self
+  }
 }
 
 impl<const D: usize, S: Space<D>> std::ops::Add for Vector<D, S>
@@ -261,6 +265,14 @@ where na::Const<D>: na::ToTypenum
   pub fn dot(&self, other: &Self) -> Float { self.inner.dot(&other.inner) }
 
   pub fn inner(&self) -> na::Unit<na::SVector<Float, D>> { self.inner }
+
+  pub fn reflect_about(&self, normal: Direction<D, S>) -> Self {
+    let d = self.inner().into_inner();
+    let n = normal.inner().into_inner();
+    let mut r = na::Unit::new_unchecked(n * 2.0 * d.dot(&n) - d);
+    r.renormalize_fast();
+    r.into()
+  }
 }
 
 impl<const D: usize, S: Space<D>> std::fmt::Display for Direction<D, S>
@@ -299,6 +311,14 @@ where na::Const<D>: na::ToTypenum
   fn mul(self, rhs: Float) -> Self::Output {
     Vector { inner: self.inner.into_inner() * rhs, _phantom: self._phantom }
   }
+}
+
+impl<const D: usize, S: Space<D>> ops::Neg for Direction<D, S>
+where na::Const<D>: na::ToTypenum
+{
+  type Output = Self;
+
+  fn neg(self) -> Self::Output { (-self.inner).into() }
 }
 
 /* #endregion */

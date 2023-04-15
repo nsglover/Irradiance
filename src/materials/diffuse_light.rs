@@ -30,13 +30,8 @@ pub struct DiffuseLight {
 }
 
 impl Material for DiffuseLight {
-  fn sample(
-    &self,
-    hit: &WorldRayIntersection,
-    ray: &WorldRay,
-    _: &mut dyn Sampler
-  ) -> MaterialSample {
-    if ray.dir().dot(&hit.shading_normal) > 0.0 {
+  fn sample(&self, hit: &WorldRayIntersection, _: &mut dyn Sampler) -> MaterialSample {
+    if hit.ray.dir().dot(&hit.shading_normal) > 0.0 {
       MaterialSample::nothing()
     } else {
       MaterialSample::emission(self.light_color.value(hit) * self.light_intensity)

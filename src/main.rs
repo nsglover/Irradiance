@@ -20,7 +20,6 @@ mod wrapper;
 // TODO: Photon mapping
 
 // Important Features:
-// TODO: Dieletric and metal materials
 // TODO: Stratified sampling
 // TODO: Direct lighting MIS
 // TODO: Image loading and image texture
@@ -84,10 +83,7 @@ fn main() -> Result<(), Box<dyn Error>> {
   let default_file_name = scene_file.chars().take(scene_file.len() - ".json".len()).collect();
   let file_name = image_file.unwrap_or(default_file_name) + ".png";
 
-  println!("Using scene file \"{scene_file}\".");
-  println!("Image will be saved to \"{file_name}\".\n");
-
-  println!("Building scene...");
+  println!("Building scene from \"{scene_file}\"...");
   let build_time = std::time::Instant::now();
   let reader = BufReader::new(File::open(scene_file)?);
   let json = serde_json::from_reader(reader)?;
@@ -101,7 +97,10 @@ fn main() -> Result<(), Box<dyn Error>> {
     subimage_dimensions: (subimage_edge_length, subimage_edge_length),
     use_progress_bar: !no_progress_bar
   });
+
+  println!("Saving image to \"{file_name}\"...\n");
   image.save(file_name)?;
+
   if no_progress_bar {
     println!("Rendering complete! Time: {}", duration_to_hms(&render_time.elapsed()));
   } else {

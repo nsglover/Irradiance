@@ -36,7 +36,7 @@ impl SurfaceGroup for SurfaceList {
     let mut closest = None;
     for (surface, bbox) in &self.surfaces {
       if bbox.ray_intersects(&ray) {
-        if let Some(hit) = surface.intersect_world_ray(&ray) {
+        if let Some(hit) = surface.intersect_world_ray(ray.clone()) {
           ray.set_max_intersect_time(hit.intersect_time);
           closest = Some(hit);
         }

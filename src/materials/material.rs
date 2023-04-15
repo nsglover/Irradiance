@@ -21,18 +21,22 @@ impl MaterialSample {
 
   pub fn emission(color: Color) -> Self { Self { emission: Some(color), reflection: None } }
 
-  pub fn reflection(
-    attenuation: Color,
-    scattered_ray: WorldRay,
-    reflection_type: ReflectionType
-  ) -> Self {
-    if let ReflectionType::Diffuse(pdf) = reflection_type {
-      if pdf == 0.0 {
-        return Self::nothing();
+  pub fn diffuse(attenuation: Color, scattered_ray: WorldRay, pdf: Float) -> Self {
+    if pdf == 0.0 {
+      Self::nothing()
+    } else {
+      Self {
+        emission: None,
+        reflection: Some((attenuation, scattered_ray, ReflectionType::Diffuse(pdf)))
       }
     }
+  }
 
-    Self { emission: None, reflection: Some((attenuation, scattered_ray, reflection_type)) }
+  pub fn specular(attenuation: Color, scattered_ray: WorldRay) -> Self {
+    Self {
+      emission: None,
+      reflection: Some((attenuation, scattered_ray, ReflectionType::Specular))
+    }
   }
 }
 
@@ -46,10 +50,5 @@ pub enum ReflectionType {
 }
 
 pub trait Material: Debug {
-  fn sample(
-    &self,
-    hit: &WorldRayIntersection,
-    ray: &WorldRay,
-    sampler: &mut dyn Sampler
-  ) -> MaterialSample;
+  fn sample(&self, hit: &WorldRayIntersection, sampler: &mut dyn Sampler) -> MaterialSample;
 }

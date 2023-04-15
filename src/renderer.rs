@@ -108,9 +108,9 @@ impl Renderer {
       offset, offset
     );
 
-    let main_bar_style =
-      format!("[ {{elapsed_precise}} / {{duration_precise}} ]: {{bar:50.green/red}} ")
-        + &format!("{{pos:>{}}}/{{len:<{}}} subimages", offset, offset);
+    let main_bar_style = "[ {elapsed_precise} / {duration_precise} ]: {bar:50.green/red} "
+      .to_string()
+      + &format!("{{pos:>{}}}/{{len:<{}}} subimages", offset, offset);
 
     // Create thread pool and move all shared data into atomic reference counters.
     let thread_pool = ThreadPool::new(settings.num_threads);
@@ -172,7 +172,7 @@ impl Renderer {
       );
     }
 
-    maybe_progress_bars_and_overall.map(|(_, overall_progress_bar)| {
+    if let Some((_, overall_progress_bar)) = maybe_progress_bars_and_overall {
       while thread_pool.queued_count() > 0 {
         thread::sleep(Duration::from_millis(10));
         overall_progress_bar.set_position(
@@ -184,7 +184,7 @@ impl Renderer {
       }
 
       overall_progress_bar.finish()
-    });
+    };
 
     // Wait for the threads to finish and return the resulting image.
     thread_pool.join();
@@ -211,9 +211,9 @@ impl Renderer {
       let mut subimage = Image::new(sub_w, sub_h);
 
       // Set the progress bar message to indicate that this thread has officially started
-      maybe_progress_bar.as_ref().map(|progress_bar| {
+      if let Some(progress_bar) = maybe_progress_bar.as_ref() {
         progress_bar.set_message(format!("( {:<4}, {:>4} )", sub_x, sub_y));
-      });
+      }
 
       // Precompute 1 / samples_per_pixel to save some time.
       let inv_spp = 1.0 / (samples_per_pixel as Float);

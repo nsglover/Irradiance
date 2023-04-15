@@ -25,12 +25,7 @@ pub struct Lambertian {
 }
 
 impl Material for Lambertian {
-  fn sample(
-    &self,
-    hit: &WorldRayIntersection,
-    _: &WorldRay,
-    sampler: &mut dyn Sampler
-  ) -> MaterialSample {
+  fn sample(&self, hit: &WorldRayIntersection, sampler: &mut dyn Sampler) -> MaterialSample {
     let random: WorldVector = uniform_random_on_unit_sphere(sampler).into();
     let normal: WorldVector = hit.shading_normal.into();
     let dir = (normal + random).normalize();
@@ -39,6 +34,6 @@ impl Material for Lambertian {
     let color = self.albedo.value(hit) * pdf;
     let scattered_ray = WorldRay::new(hit.intersect_point, dir);
 
-    MaterialSample::reflection(color, scattered_ray, ReflectionType::Diffuse(pdf))
+    MaterialSample::diffuse(color, scattered_ray, pdf)
   }
 }

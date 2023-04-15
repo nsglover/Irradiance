@@ -53,7 +53,7 @@ impl TransformedSurface for SphereSurface {
 
   fn intersect_ray(
     &self,
-    ray: &Ray3<Self::LocalSpace>
+    ray: Ray3<Self::LocalSpace>
   ) -> Option<RayIntersection<Self::LocalSpace>> {
     let origin_vec = Vector3::from(ray.origin());
     let b = 2.0 * Vector3::from(ray.dir()).dot(&origin_vec);
@@ -91,7 +91,7 @@ impl TransformedSurface for SphereSurface {
     let v = (theta + PI / 2.0) / PI;
 
     Some(RayIntersection {
-      intersecting_ray: ray.clone(),
+      ray,
       intersect_time: t,
       intersect_point: Vector3::from(normalized_p).into(),
       geom_normal: normalized_p,

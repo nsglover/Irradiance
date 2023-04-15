@@ -16,7 +16,7 @@ pub trait SurfaceParameters: Debug {
 pub trait Surface: Debug {
   fn world_bounding_box(&self) -> WorldBBox;
 
-  fn intersect_world_ray(&self, ray: &WorldRay) -> Option<WorldRayIntersection>;
+  fn intersect_world_ray(&self, ray: WorldRay) -> Option<WorldRayIntersection>;
 }
 
 pub trait TransformedSurface {
@@ -26,10 +26,8 @@ pub trait TransformedSurface {
 
   fn bounding_box(&self) -> BBox3<Self::LocalSpace>;
 
-  fn intersect_ray(
-    &self,
-    ray: &Ray3<Self::LocalSpace>
-  ) -> Option<RayIntersection<Self::LocalSpace>>;
+  fn intersect_ray(&self, ray: Ray3<Self::LocalSpace>)
+    -> Option<RayIntersection<Self::LocalSpace>>;
 }
 
 // TODO: Move this to transform class
@@ -52,16 +50,16 @@ impl<T: TransformedSurface + Debug> Surface for T {
       points[7] = Point3::from(nalgebra::point![max.x, max.y, max.z]);
 
       let mut transformed_bbox = WorldBBox::default();
-      for i in 0..8 {
-        transformed_bbox.enclose_point(&(self.local_to_world() * &points[i]));
+      for point in points {
+        transformed_bbox.enclose_point(&(self.local_to_world() * &point));
       }
 
       transformed_bbox
     }
   }
 
-  fn intersect_world_ray(&self, ray: &WorldRay) -> Option<WorldRayIntersection> {
-    let maybe_local_hit = self.intersect_ray(&self.local_to_world().inverse_ray(ray));
+  fn intersect_world_ray(&self, ray: WorldRay) -> Option<WorldRayIntersection> {
+    let maybe_local_hit = self.intersect_ray(self.local_to_world().inverse_ray(&ray));
     maybe_local_hit.map(|local_hit| self.local_to_world().ray_intersect(&local_hit))
   }
 }

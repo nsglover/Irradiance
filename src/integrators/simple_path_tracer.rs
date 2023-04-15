@@ -32,8 +32,8 @@ impl SimplePathTracer {
     ray: WorldRay,
     remaining_bounces: usize
   ) -> Color {
-    if let Some(hit) = self.surfaces.intersect_world_ray(ray.clone()) {
-      let sample = hit.material.sample(&hit, &ray, sampler);
+    if let Some(hit) = self.surfaces.intersect_world_ray(ray) {
+      let sample = hit.material.sample(&hit, sampler);
       let emitted = sample.emission.unwrap_or(Color::black());
       if remaining_bounces == 0 {
         return emitted;
