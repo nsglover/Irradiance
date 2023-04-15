@@ -92,12 +92,13 @@ impl TransformedSurface for SphereSurface {
 
     Some(RayIntersection {
       ray,
+      surface: self,
+      material: self.material.as_ref(),
       intersect_time: t,
       intersect_point: Vector3::from(normalized_p).into(),
-      geom_normal: normalized_p,
+      geometric_normal: normalized_p,
       shading_normal: normalized_p,
-      tex_coords: Vector::from_array([u, v]),
-      material: self.material.as_ref()
+      tex_coords: Vector::from_array([u, v])
     })
   }
 }

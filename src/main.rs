@@ -21,7 +21,7 @@ mod wrapper;
 
 // Important Features:
 // TODO: Stratified sampling
-// TODO: Direct lighting MIS
+// TODO: General MIS (from any number of integrators)
 // TODO: Image loading and image texture
 // TODO: Mesh loading and the triangle mesh surface
 
@@ -32,7 +32,8 @@ mod wrapper;
 
 // Side Features:
 // TODO: Perlin noise
-// TODO: Blend material (arbitrary number rather than just 2)
+// TODO: Blend material (from any number of materials)
+// TODO: Generalized ray termination procedures (to generalize Russian roulette and max bounces)
 // TODO: Environment map
 
 #[derive(Parser, Debug)]
@@ -49,7 +50,7 @@ struct Arguments {
   #[arg(short = 'j', long = "threads", default_value_t = 1)]
   num_threads: usize,
 
-  #[arg(long)]
+  #[arg(short = 'q')]
   no_progress_bar: bool
 }
 
@@ -80,8 +81,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     panic!("Scene file must have the .json file suffix!");
   }
 
-  let default_file_name = scene_file.chars().take(scene_file.len() - ".json".len()).collect();
-  let file_name = image_file.unwrap_or(default_file_name) + ".png";
+  let scene_name = scene_file.chars().take(scene_file.len() - ".json".len()).collect();
 
   println!("Building scene from \"{scene_file}\"...");
   let build_time = std::time::Instant::now();
@@ -90,7 +90,7 @@ fn main() -> Result<(), Box<dyn Error>> {
   let renderer = Renderer::build_from_json(json)?;
   println!("Building complete! Time: {}\n", duration_to_hms(&build_time.elapsed()));
 
-  println!("Rendering scene...");
+  println!("Rendering scene \"{scene_name}\"...");
   let render_time = std::time::Instant::now();
   let image = renderer.render_scene(RenderSettings {
     num_threads,
@@ -98,6 +98,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     use_progress_bar: !no_progress_bar
   });
 
+  let file_name = image_file.unwrap_or(scene_name) + ".png";
   println!("Saving image to \"{file_name}\"...\n");
   image.save(file_name)?;
 

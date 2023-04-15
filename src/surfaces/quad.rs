@@ -79,12 +79,13 @@ impl TransformedSurface for QuadSurface {
 
       Some(RayIntersection {
         ray,
+        surface: self,
+        material: self.material.as_ref(),
         intersect_time: t,
         intersect_point: p.into(),
-        geom_normal: normal,
+        geometric_normal: normal,
         shading_normal: normal,
-        tex_coords,
-        material: self.material.as_ref()
+        tex_coords
       })
     })
   }

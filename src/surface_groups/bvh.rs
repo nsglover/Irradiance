@@ -1,5 +1,5 @@
 use {
-  super::*,
+  super::{surface_list::*, *},
   crate::{math::*, surfaces::Surface},
   rand::{distributions::Uniform, Rng},
   serde_derive::Deserialize
@@ -56,7 +56,9 @@ impl BvhNode {
             maybe_right.as_ref().and_then(|right| right.intersect(ray.clone()))
           ) {
             (None, maybe_hit) | (maybe_hit, None) => {
-              if let Some(hit) = maybe_hit.as_ref() { ray.set_max_intersect_time(hit.intersect_time); }
+              if let Some(hit) = maybe_hit.as_ref() {
+                ray.set_max_intersect_time(hit.intersect_time);
+              }
 
               maybe_hit
             },

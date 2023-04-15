@@ -13,7 +13,7 @@ where Const<D>: ToTypenum
   pub(super) dir: Direction<D, S>
 }
 
-const MIN_INTERSECT_TIME: Float = Float::EPSILON * 16.0;
+const MIN_INTERSECT_TIME: Float = 0.00001;
 
 impl<const D: usize, S: Space<D>> Ray<D, S>
 where Const<D>: ToTypenum

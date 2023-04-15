@@ -17,7 +17,7 @@
 	},
   "integrator":
   {
-    "type": "simple_path_tracer",
+    "type": "material-path-tracer",
     "max_bounces": 64
   },
 	"materials": [

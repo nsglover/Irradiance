@@ -1,14 +1,7 @@
 use {
   crate::{
-    camera::*,
-    color::Color,
-    integrators::*,
-    materials::MaterialParameters,
-    math::*,
-    samplers::*,
-    surface_groups::{BvhParameters, PartitionStrategy, SurfaceGroupParameters},
-    surfaces::SurfaceParameters,
-    RenderSettings
+    camera::*, color::Color, integrators::*, materials::MaterialParameters, math::*, samplers::*,
+    surface_groups::SurfaceGroupParameters, surfaces::SurfaceParameters, RenderSettings
   },
   image::{DynamicImage, ImageBuffer, Rgb},
   indicatif::{MultiProgress, ProgressBar, ProgressDrawTarget, ProgressStyle},
@@ -22,15 +15,6 @@ use {
   },
   threadpool::ThreadPool
 };
-
-fn default_surface_group() -> Box<dyn SurfaceGroupParameters> {
-  Box::new(BvhParameters {
-    partition_strategy: PartitionStrategy::SurfaceAreaHeuristic,
-    max_leaf_primitives: 2
-  })
-}
-
-fn default_integrator() -> Box<dyn IntegratorParameters> { Box::new(NormalIntegratorParameters {}) }
 
 #[derive(Debug, Deserialize)]
 struct SceneParameters {
@@ -46,10 +30,10 @@ struct SceneParameters {
   #[serde(alias = "surfaces")]
   pub surface_params: Vec<Box<dyn SurfaceParameters>>,
 
-  #[serde(alias = "accelerator", default = "default_surface_group")]
+  #[serde(alias = "accelerator", default = "crate::surface_groups::default_surface_group")]
   pub surface_group_params: Box<dyn SurfaceGroupParameters>,
 
-  #[serde(alias = "integrator", default = "default_integrator")]
+  #[serde(alias = "integrator", default = "crate::integrators::default_integrator")]
   pub integrator_params: Box<dyn IntegratorParameters>
 }
 

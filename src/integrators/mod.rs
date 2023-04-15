@@ -1,5 +1,10 @@
+mod debug_path_tracer;
 mod integrator;
+mod material_path_tracer;
 mod normal_integrator;
-mod simple_path_tracer;
 
-pub use {integrator::*, normal_integrator::*, simple_path_tracer::*};
+pub use integrator::*;
+
+pub fn default_integrator() -> Box<dyn IntegratorParameters> {
+  Box::new(normal_integrator::NormalIntegratorParameters {})
+}

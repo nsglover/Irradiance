@@ -1,7 +1,5 @@
-use crate::materials::MaterialParameters;
-
 use {
-  crate::math::*,
+  crate::{materials::MaterialParameters, math::*},
   std::{collections::HashMap, fmt::Debug}
 };
 
@@ -59,7 +57,8 @@ impl<T: TransformedSurface + Debug> Surface for T {
   }
 
   fn intersect_world_ray(&self, ray: WorldRay) -> Option<WorldRayIntersection> {
-    let maybe_local_hit = self.intersect_ray(self.local_to_world().inverse_ray(&ray));
-    maybe_local_hit.map(|local_hit| self.local_to_world().ray_intersect(&local_hit))
+    self
+      .intersect_ray(self.local_to_world().inverse_ray(&ray))
+      .map(|local_hit| self.local_to_world().ray_intersect(&local_hit))
   }
 }
