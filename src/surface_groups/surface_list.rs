@@ -1,6 +1,6 @@
 use {
   super::*,
-  crate::{math::*, surfaces::Surface},
+  crate::{math::*, raytracing::*, surfaces::Surface},
   serde::Deserialize
 };
 
@@ -19,7 +19,7 @@ impl SurfaceGroupParameters for SurfaceListParameters {
 
 #[derive(Debug)]
 pub struct SurfaceList {
-  surfaces: Vec<(Box<dyn Surface>, WorldBBox)>
+  surfaces: Vec<(Box<dyn Surface>, WorldBoundingBox)>
 }
 
 impl SurfaceList {

@@ -1,11 +1,6 @@
-use super::TextureParameters;
-
 use {
-  super::Texture,
-  crate::{
-    color::{Color, ColorParameters},
-    math::*
-  },
+  super::{Texture, TextureParameters},
+  crate::{light::*, raytracing::*},
   serde::Deserialize
 };
 
@@ -17,13 +12,17 @@ pub struct ConstantTextureParameters {
 #[typetag::deserialize(name = "constant")]
 impl TextureParameters for ConstantTextureParameters {
   fn build_texture(&self) -> Box<dyn Texture> {
-    Box::new(ConstantTexture { color: self.color.build_color() })
+    Box::new(ConstantTexture::new(self.color.build_color()))
   }
 }
 
 #[derive(Debug)]
 pub struct ConstantTexture {
   color: Color
+}
+
+impl ConstantTexture {
+  pub fn new(color: Color) -> Self { Self { color } }
 }
 
 impl Texture for ConstantTexture {

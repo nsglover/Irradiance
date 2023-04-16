@@ -1,12 +1,14 @@
 use {
   super::*,
-  crate::{color::Color, materials::*, math::*, samplers::*, surface_groups::*},
+  crate::{light::*, materials::*, math::Float, raytracing::*, samplers::*, surface_groups::*},
   serde::Deserialize
 };
 
+// TODO: Add background to this
 #[derive(Debug, Deserialize)]
 struct PathTracerParameters {
-  max_bounces: usize
+  #[serde(alias = "average-path-length")]
+  average_path_length: usize
 }
 
 #[typetag::deserialize(name = "material-path-tracer")]
@@ -15,49 +17,55 @@ impl IntegratorParameters for PathTracerParameters {
     &self,
     surfaces: Box<dyn SurfaceGroup>
   ) -> Result<Box<dyn Integrator + Sync + Send>, Box<dyn std::error::Error>> {
-    Ok(Box::new(SimplePathTracer { max_bounces: self.max_bounces, surfaces }))
+    Ok(Box::new(SimplePathTracer {
+      surfaces,
+      path_termination_probability: 1.0 / (self.average_path_length as Float),
+      background: Color::black()
+    }))
   }
 }
 
 #[derive(Debug)]
 pub struct SimplePathTracer {
-  max_bounces: usize,
-  surfaces: Box<dyn SurfaceGroup>
+  surfaces: Box<dyn SurfaceGroup>,
+  path_termination_probability: Float,
+  background: Color
 }
 
-impl SimplePathTracer {
-  fn recursive_estimate(
+impl ParameterizedIntegrator for SimplePathTracer {
+  fn estimate_radiance(
     &self,
     sampler: &mut dyn Sampler,
-    ray: WorldRay,
-    remaining_bounces: usize
+    maybe_ray: PathTerminator,
+    integrator: &dyn Integrator
   ) -> Color {
-    if let Some(hit) = self.surfaces.intersect_world_ray(ray) {
-      let sample = hit.material.sample(&hit, sampler);
-      let emitted = sample.emission.unwrap_or(Color::black());
-      if remaining_bounces == 0 {
-        return emitted;
-      }
+    if let Some((ray, survival_probability, continuation)) = maybe_ray.into_ray(sampler) {
+      if let Some(hit) = self.surfaces.intersect_world_ray(ray) {
+        let sample = hit.material.sample(&hit, sampler);
+        let mut radiance_emitted = sample.emission.unwrap_or(Color::black());
 
-      if let Some((attenuation, scattered, reflection_type)) = sample.reflection {
-        let mut rec = self.recursive_estimate(sampler, scattered, remaining_bounces - 1);
-        if let ReflectionType::Diffuse(pdf) = reflection_type {
-          rec /= pdf;
+        if let Some((mut attenuation, scattered_ray, reflection_type)) = sample.reflection {
+          attenuation /= survival_probability;
+          let maybe_scattered_ray = continuation.into_terminator(scattered_ray);
+          let mut radiance_in = integrator.radiance(sampler, maybe_scattered_ray);
+          if let ReflectionType::Diffuse(pdf) = reflection_type {
+            radiance_in /= pdf;
+          }
+
+          radiance_emitted += attenuation * radiance_in
         }
 
-        emitted + attenuation * rec
+        radiance_emitted
       } else {
-        emitted
+        self.background
       }
     } else {
       Color::black()
     }
   }
-}
 
-impl Integrator for SimplePathTracer {
-  fn estimate_radiance(&self, sampler: &mut dyn Sampler, ray: WorldRay) -> Color {
-    self.recursive_estimate(sampler, ray, self.max_bounces)
+  fn initial_path_terminator(&self, ray: WorldRay) -> PathTerminator {
+    PathTerminator::new(ray, self.path_termination_probability)
   }
 }
 

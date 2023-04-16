@@ -3,6 +3,7 @@ use {
   crate::{
     materials::{Material, MaterialParameters},
     math::*,
+    raytracing::*,
     textures::TextureCoordinates
   },
   nalgebra as na,
@@ -54,8 +55,8 @@ impl TransformedSurface for QuadSurface {
 
   fn local_to_world(&self) -> &LocalToWorld<Self::LocalSpace> { &self.transform }
 
-  fn bounding_box(&self) -> BBox3<Self::LocalSpace> {
-    BBox3::new(na::point![-0.5, -0.5, 0.0].into(), na::point![0.5, 0.5, 0.0].into())
+  fn bounding_box(&self) -> BoundingBox3<Self::LocalSpace> {
+    BoundingBox3::new(na::point![-0.5, -0.5, 0.0].into(), na::point![0.5, 0.5, 0.0].into())
   }
 
   fn intersect_ray(

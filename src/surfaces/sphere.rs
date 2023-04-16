@@ -2,7 +2,8 @@ use {
   super::*,
   crate::{
     materials::{Material, MaterialParameters},
-    math::*
+    math::*,
+    raytracing::*
   },
   serde::Deserialize,
   std::collections::HashMap
@@ -47,8 +48,11 @@ impl TransformedSurface for SphereSurface {
 
   fn local_to_world(&self) -> &LocalToWorld<Self::LocalSpace> { &self.transform }
 
-  fn bounding_box(&self) -> BBox3<Self::LocalSpace> {
-    BBox3::new(nalgebra::point![-1.0, -1.0, -1.0].into(), nalgebra::point![1.0, 1.0, 1.0].into())
+  fn bounding_box(&self) -> BoundingBox3<Self::LocalSpace> {
+    BoundingBox3::new(
+      nalgebra::point![-1.0, -1.0, -1.0].into(),
+      nalgebra::point![1.0, 1.0, 1.0].into()
+    )
   }
 
   fn intersect_ray(

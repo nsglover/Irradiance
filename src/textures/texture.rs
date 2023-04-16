@@ -1,5 +1,5 @@
 use {
-  crate::{color::*, math::*},
+  crate::{light::*, math::*, raytracing::WorldRayIntersection},
   std::fmt::Debug
 };
 

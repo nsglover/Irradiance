@@ -2,6 +2,7 @@ use std::fmt::Display;
 
 use {
   super::{phantom::*, *},
+  crate::raytracing::*,
   nalgebra as na,
   serde::Deserialize,
   std::ops
@@ -87,15 +88,15 @@ impl<In: Space<3>, Out: Space<3>> Transform<In, Out> {
   }
 
   pub fn ray(&self, ray: &Ray3<In>) -> Ray3<Out> {
-    let dir: Vector3<In> = ray.dir.inner.into_inner().into();
+    let dir: Vector3<In> = ray.dir().inner.into_inner().into();
     let transformed_dir = self.vector(&dir);
     let time_dilation = transformed_dir.norm();
 
-    Ray3 {
-      max_intersect_time: ray.max_intersect_time * time_dilation,
-      origin: self.point(&ray.origin),
-      dir: na::Unit::new_unchecked((transformed_dir / time_dilation).inner).into()
-    }
+    Ray3::new_with_time(
+      ray.max_intersect_time() * time_dilation,
+      self.point(&ray.origin()),
+      na::Unit::new_unchecked((transformed_dir / time_dilation).inner).into()
+    )
   }
 
   pub fn ray_intersect<'a>(
@@ -103,15 +104,15 @@ impl<In: Space<3>, Out: Space<3>> Transform<In, Out> {
     ray_intersection: &RayIntersection<'a, In>
   ) -> RayIntersection<'a, Out> {
     let ray = &ray_intersection.ray;
-    let dir: Vector3<In> = ray.dir.inner.into_inner().into();
+    let dir: Vector3<In> = ray.dir().inner.into_inner().into();
     let transformed_dir = self.vector(&dir);
     let time_dilation = transformed_dir.norm();
 
-    let transformed_ray = Ray3 {
-      max_intersect_time: ray.max_intersect_time * time_dilation,
-      origin: self.point(&ray.origin),
-      dir: na::Unit::new_unchecked((transformed_dir / time_dilation).inner).into()
-    };
+    let transformed_ray = Ray3::new_with_time(
+      ray.max_intersect_time() * time_dilation,
+      self.point(&ray.origin()),
+      na::Unit::new_unchecked((transformed_dir / time_dilation).inner).into()
+    );
 
     RayIntersection {
       ray: transformed_ray,
@@ -145,15 +146,15 @@ impl<In: Space<3>, Out: Space<3>> Transform<In, Out> {
   }
 
   pub fn inverse_ray(&self, ray: &Ray3<Out>) -> Ray3<In> {
-    let dir: Vector3<Out> = ray.dir.inner.into_inner().into();
+    let dir: Vector3<Out> = ray.dir().inner.into_inner().into();
     let transformed_dir = self.inverse_vector(&dir);
     let time_dilation = transformed_dir.norm();
 
-    Ray3 {
-      max_intersect_time: ray.max_intersect_time * time_dilation,
-      origin: self.inverse_point(&ray.origin),
-      dir: na::Unit::new_unchecked((transformed_dir / time_dilation).inner).into()
-    }
+    Ray3::new_with_time(
+      ray.max_intersect_time() * time_dilation,
+      self.inverse_point(&ray.origin()),
+      na::Unit::new_unchecked((transformed_dir / time_dilation).inner).into()
+    )
   }
 
   pub fn inverse_ray_intersect<'a>(
@@ -161,15 +162,15 @@ impl<In: Space<3>, Out: Space<3>> Transform<In, Out> {
     ray_intersection: &RayIntersection<'a, Out>
   ) -> RayIntersection<'a, In> {
     let ray = &ray_intersection.ray;
-    let dir: Vector3<Out> = ray.dir.inner.into_inner().into();
+    let dir: Vector3<Out> = ray.dir().inner.into_inner().into();
     let transformed_dir = self.inverse_vector(&dir);
     let time_dilation = transformed_dir.norm();
 
-    let transformed_ray = Ray3 {
-      max_intersect_time: ray.max_intersect_time * time_dilation,
-      origin: self.inverse_point(&ray.origin),
-      dir: na::Unit::new_unchecked((transformed_dir / time_dilation).inner).into()
-    };
+    let transformed_ray = Ray3::new_with_time(
+      ray.max_intersect_time() * time_dilation,
+      self.inverse_point(&ray.origin()),
+      na::Unit::new_unchecked((transformed_dir / time_dilation).inner).into()
+    );
 
     RayIntersection {
       ray: transformed_ray,

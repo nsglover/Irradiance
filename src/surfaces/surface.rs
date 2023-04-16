@@ -1,5 +1,5 @@
 use {
-  crate::{materials::MaterialParameters, math::*},
+  crate::{materials::MaterialParameters, math::*, raytracing::*},
   std::{collections::HashMap, fmt::Debug}
 };
 
@@ -12,7 +12,7 @@ pub trait SurfaceParameters: Debug {
 }
 
 pub trait Surface: Debug {
-  fn world_bounding_box(&self) -> WorldBBox;
+  fn world_bounding_box(&self) -> WorldBoundingBox;
 
   fn intersect_world_ray(&self, ray: WorldRay) -> Option<WorldRayIntersection>;
 }
@@ -22,7 +22,7 @@ pub trait TransformedSurface {
 
   fn local_to_world(&self) -> &LocalToWorld<Self::LocalSpace>;
 
-  fn bounding_box(&self) -> BBox3<Self::LocalSpace>;
+  fn bounding_box(&self) -> BoundingBox3<Self::LocalSpace>;
 
   fn intersect_ray(&self, ray: Ray3<Self::LocalSpace>)
     -> Option<RayIntersection<Self::LocalSpace>>;
@@ -30,12 +30,12 @@ pub trait TransformedSurface {
 
 // TODO: Move this to transform class
 impl<T: TransformedSurface + Debug> Surface for T {
-  fn world_bounding_box(&self) -> WorldBBox {
+  fn world_bounding_box(&self) -> WorldBoundingBox {
     let bbox = self.bounding_box();
     let min = bbox.min().inner();
     let max = bbox.max().inner();
     if bbox.is_empty() {
-      WorldBBox::new(min.into(), max.into())
+      WorldBoundingBox::new(min.into(), max.into())
     } else {
       let mut points: [Point3<T::LocalSpace>; 8] = [Point3::origin(); 8];
       points[0] = Point3::from(nalgebra::point![min.x, min.y, min.z]);
@@ -47,7 +47,7 @@ impl<T: TransformedSurface + Debug> Surface for T {
       points[6] = Point3::from(nalgebra::point![max.x, min.y, max.z]);
       points[7] = Point3::from(nalgebra::point![max.x, max.y, max.z]);
 
-      let mut transformed_bbox = WorldBBox::default();
+      let mut transformed_bbox = WorldBoundingBox::default();
       for point in points {
         transformed_bbox.enclose_point(&(self.local_to_world() * &point));
       }

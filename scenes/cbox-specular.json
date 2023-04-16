@@ -7,9 +7,9 @@
 		},
 		"vfov": 40,
 		"fdist": 800,
-    "resolution": [1024, 1024]
+    "resolution": [512, 512]
 	},
-	"image_samples": 2048,
+	"image_samples": 512,
 	"background": [0,0,0],
 	"accelerator":
 	{
@@ -18,7 +18,7 @@
   "integrator":
   {
     "type": "material-path-tracer",
-    "max_bounces": 64
+    "average-path-length": 1024
   },
 	"materials": [
 		{
@@ -45,7 +45,7 @@
 		{
 			"type": "mirror",
 			"name": "metal",
-			"albedo": {"type": "constant", "color": 1}
+			"albedo": {"type": "constant", "color": 0.8}
 		},
 		{
 			"type": "dielectric",

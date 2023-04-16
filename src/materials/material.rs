@@ -1,5 +1,5 @@
 use {
-  crate::{color::Color, math::*, samplers::Sampler},
+  crate::{light::*, math::*, raytracing::*, samplers::Sampler},
   std::fmt::Debug
 };
 

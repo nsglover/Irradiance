@@ -1,17 +1,18 @@
 use {
   super::*,
+  crate::raytracing::*,
   nalgebra::{Const, ToTypenum}
 };
 
 #[derive(Debug)]
-pub struct BBox<const D: usize, S: Space<D>>
+pub struct BoundingBox<const D: usize, S: Space<D>>
 where Const<D>: ToTypenum
 {
   min: Point<D, S>,
   max: Point<D, S>
 }
 
-impl<const D: usize, S: Space<D>> BBox<D, S>
+impl<const D: usize, S: Space<D>> BoundingBox<D, S>
 where Const<D>: ToTypenum
 {
   pub fn new(min: Point<D, S>, max: Point<D, S>) -> Self {
@@ -31,7 +32,7 @@ where Const<D>: ToTypenum
     false
   }
 
-  pub fn enclose_box(&mut self, other: &BBox<D, S>) {
+  pub fn enclose_box(&mut self, other: &BoundingBox<D, S>) {
     *self = Self::new(
       self.min.inner.inf(&other.min.inner).into(),
       self.max.inner.sup(&other.max.inner).into()
@@ -73,7 +74,7 @@ where Const<D>: ToTypenum
   pub fn max(&self) -> Point<D, S> { self.max }
 }
 
-impl<const D: usize, S: Space<D>> Default for BBox<D, S>
+impl<const D: usize, S: Space<D>> Default for BoundingBox<D, S>
 where Const<D>: ToTypenum
 {
   fn default() -> Self {
@@ -84,9 +85,9 @@ where Const<D>: ToTypenum
   }
 }
 
-pub type BBox3<S> = BBox<3, S>;
+pub type BoundingBox3<S> = BoundingBox<3, S>;
 
-impl<S: Space<3>> BBox<3, S> {
+impl<S: Space<3>> BoundingBox<3, S> {
   pub fn surface_area(&self) -> Float {
     if self.is_empty() {
       0.0
@@ -97,4 +98,4 @@ impl<S: Space<3>> BBox<3, S> {
   }
 }
 
-pub type WorldBBox = BBox3<WorldSpace>;
+pub type WorldBoundingBox = BoundingBox3<WorldSpace>;

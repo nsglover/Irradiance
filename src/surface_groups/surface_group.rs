@@ -1,5 +1,5 @@
 use {
-  crate::{math::*, surfaces::Surface},
+  crate::{raytracing::*, surfaces::Surface},
   std::{error::Error, fmt::Debug}
 };
 

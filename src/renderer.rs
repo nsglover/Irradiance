@@ -1,6 +1,8 @@
+use threadpool::Builder;
+
 use {
   crate::{
-    camera::*, color::Color, integrators::*, materials::MaterialParameters, math::*, samplers::*,
+    camera::*, integrators::*, light::*, materials::MaterialParameters, math::*, samplers::*,
     surface_groups::SurfaceGroupParameters, surfaces::SurfaceParameters, RenderSettings
   },
   image::{DynamicImage, ImageBuffer, Rgb},
@@ -41,7 +43,6 @@ fn parse_scene_params(json: Value) -> Result<SceneParameters, Box<dyn Error>> {
   Ok(serde_json::from_value(json)?)
 }
 
-#[derive(Debug)]
 pub struct Renderer {
   samples_per_pixel: usize,
   camera: Camera,
@@ -87,29 +88,35 @@ impl Renderer {
       ((subimg_width * subimg_height) as f64).log10().ceil() as usize
     );
 
-    let sub_bar_style = format!(
-      "Subimage {{msg}}: {{bar:50.cyan/magenta}} {{pos:>{}}}/{{len:<{}}} pixels",
-      offset, offset
+    let main_bar_style = format!(
+      "[ {{elapsed_precise}} / {{duration_precise}} ]: {{bar:50.green/red}} {{msg:>{offset}}}/{num_subimages} subimages"
     );
 
-    let main_bar_style = "[ {elapsed_precise} / {duration_precise} ]: {bar:50.green/red} "
-      .to_string()
-      + &format!("{{pos:>{}}}/{{len:<{}}} subimages", offset, offset);
+    let sub_bar_style = format!(
+      "Subimage {{msg}}: {{bar:50.cyan/magenta}} {{pos:>{offset}}}/{{len:<{offset}}} pixels",
+    );
 
-    // Create thread pool and move all shared data into atomic reference counters.
-    let thread_pool = ThreadPool::new(settings.num_threads);
+    // Set up the thread pool with a larger stack size (due to many integrators being highly
+    // recursive, terminated only by Russian roulette).
+    let thread_pool = Builder::new()
+      .num_threads(settings.num_threads)
+      .thread_stack_size(16 * 1024 * 1024)
+      .thread_name("pbr-project-subimage-renderer".to_owned())
+      .build();
+
+    // Move all shared data into atomic reference counters.
     let integrator = Arc::new(self.integrator);
     let camera = Arc::new(self.camera);
     let image_lock = Arc::new(Mutex::new(image));
 
     // Create a MultiProgressBar to manage each thread's progress bar.
-    let maybe_progress_bars_and_overall = settings.use_progress_bar.then(|| {
+    let mut maybe_progress_bars = settings.use_progress_bar.then(|| {
       let progress_bars = MultiProgress::with_draw_target(ProgressDrawTarget::stdout());
-      let overall_progress_bar = ProgressBar::new(num_subimages as u64);
+      let overall_progress_bar = ProgressBar::new((width * height) as u64);
       overall_progress_bar
         .set_style(ProgressStyle::with_template(&main_bar_style).unwrap().progress_chars("##-"));
       progress_bars.add(overall_progress_bar.clone());
-      (progress_bars, overall_progress_bar)
+      (progress_bars, Vec::new(), overall_progress_bar)
     });
 
     // For each pair of intervals, add a subimage window to a collection.
@@ -137,10 +144,11 @@ impl Renderer {
     for subimage_window @ (_, (sub_w, sub_h)) in subimage_windows {
       // Create a progress bar for tracking each pixel rendered in this subimage.
       let maybe_progress_bar =
-        maybe_progress_bars_and_overall.as_ref().map(|(progress_bars, _)| {
+        maybe_progress_bars.as_mut().map(|(progress_bars, progress_bar_list, _)| {
           let progress_bar = ProgressBar::new((sub_w * sub_h) as u64);
           progress_bar.set_style(style.clone());
           progress_bars.add(progress_bar.clone());
+          progress_bar_list.push(progress_bar.clone());
           progress_bar
         });
 
@@ -156,15 +164,16 @@ impl Renderer {
       );
     }
 
-    if let Some((_, overall_progress_bar)) = maybe_progress_bars_and_overall {
+    if let Some((_, progress_bar_list, overall_progress_bar)) = maybe_progress_bars {
       while thread_pool.queued_count() > 0 {
+        thread::sleep(Duration::from_millis(100));
+        let total_progress: u64 = progress_bar_list.iter().map(|p| p.position()).sum();
+        overall_progress_bar.set_position(total_progress);
         thread::sleep(Duration::from_millis(10));
-        overall_progress_bar.set_position(
-          (num_subimages as usize - (thread_pool.queued_count() + thread_pool.active_count()))
-            as u64
-        );
-
-        overall_progress_bar.tick()
+        overall_progress_bar.set_message(format!(
+          "{}",
+          num_subimages as usize - (thread_pool.queued_count() + thread_pool.active_count()),
+        ))
       }
 
       overall_progress_bar.finish()
@@ -218,7 +227,7 @@ impl Renderer {
             let ray = camera.sample_ray_through_pixel(&mut ray_sampler, ray_x, ray_y);
 
             // Add the incoming radiance to our running average.
-            light += integrator.estimate_radiance(&mut integrator_sampler, ray);
+            light += integrator.incoming_radiance(&mut integrator_sampler, ray);
           }
 
           // Convert to sRGB, which is the color space expected by the image buffer

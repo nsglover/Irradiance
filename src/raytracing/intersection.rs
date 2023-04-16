@@ -1,4 +1,7 @@
-use crate::{materials::Material, math::*, surfaces::Surface, textures::TextureCoordinates};
+use {
+  super::*,
+  crate::{materials::Material, math::*, surfaces::Surface, textures::TextureCoordinates}
+};
 
 #[derive(Debug, Clone)]
 pub struct RayIntersection<'a, S: Space<3>> {

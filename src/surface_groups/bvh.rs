@@ -1,6 +1,6 @@
 use {
   super::{surface_list::*, *},
-  crate::{math::*, surfaces::Surface},
+  crate::{math::*, raytracing::*, surfaces::Surface},
   rand::{distributions::Uniform, Rng},
   serde_derive::Deserialize
 };
@@ -41,7 +41,7 @@ enum BvhNodeType {
 
 #[derive(Debug)]
 struct BvhNode {
-  bounding_box: WorldBBox,
+  bounding_box: WorldBoundingBox,
   node_type: BvhNodeType
 }
 
@@ -93,7 +93,7 @@ impl BoundingVolumeHierarchy {
     let num_surfaces = surfaces.len();
 
     let bounding_boxes: Vec<_> = surfaces.iter().map(|s| s.world_bounding_box()).collect();
-    let bounding_box = bounding_boxes.iter().fold(WorldBBox::default(), |mut acc, bbox| {
+    let bounding_box = bounding_boxes.iter().fold(WorldBoundingBox::default(), |mut acc, bbox| {
       acc.enclose_box(bbox);
       acc
     });

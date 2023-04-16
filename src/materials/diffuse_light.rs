@@ -1,6 +1,6 @@
 use {
   super::*,
-  crate::{math::*, samplers::Sampler, textures::*},
+  crate::{math::*, raytracing::*, samplers::Sampler, textures::*},
   serde::Deserialize
 };
 

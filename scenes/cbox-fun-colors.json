@@ -9,7 +9,7 @@
 		"fdist": 800,
     "resolution": [2048, 2048]
 	},
-	"image_samples": 4096,
+	"image_samples": 16384,
 	"background": [0,0,0],
 	"accelerator":
 	{
@@ -18,7 +18,7 @@
   "integrator":
   {
     "type": "material-path-tracer",
-    "max_bounces": 64
+    "max_bounces": 1024
   },
 	"materials": [
 		{

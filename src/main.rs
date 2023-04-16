@@ -5,10 +5,11 @@ use {
 };
 
 mod camera;
-mod color;
 mod integrators;
+mod light;
 mod materials;
 mod math;
+mod raytracing;
 mod renderer;
 mod samplers;
 mod surface_groups;
@@ -16,25 +17,31 @@ mod surfaces;
 mod textures;
 mod wrapper;
 
+// For the semester:
+
 // Project Features:
 // TODO: Photon mapping
 
 // Important Features:
-// TODO: Stratified sampling
+// TODO: Russian roulette ray termination
 // TODO: General MIS (from any number of integrators)
+// TODO: Stratified sampling
 // TODO: Image loading and image texture
 // TODO: Mesh loading and the triangle mesh surface
+
+// For summer:
 
 // Minor Improvements:
 // TODO: Stop cloning rays
 // TODO: Better system for transform inverses
 // TODO: Optimize transform system
+// TODO: Slightly overhaul math module to be even safer and much easier to use
 
 // Side Features:
 // TODO: Perlin noise
 // TODO: Blend material (from any number of materials)
-// TODO: Generalized ray termination procedures (to generalize Russian roulette and max bounces)
 // TODO: Environment map
+// TODO: Generalize camera image plane to arbitrary lens surfaces
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = Some(""))]
