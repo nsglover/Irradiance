@@ -78,4 +78,8 @@ impl Material for Dieletric {
 
     MaterialSample::specular(self.albedo.value(hit), Ray::new(hit.intersect_point, scattered_dir))
   }
+
+  fn is_emissive(&self) -> bool { false }
+
+  fn pdf(&self, _: &WorldRayIntersection, _: &WorldRay) -> Option<Float> { None }
 }

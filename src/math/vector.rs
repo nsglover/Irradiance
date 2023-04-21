@@ -1,6 +1,6 @@
 use {
   super::{phantom::*, *},
-  crate::wrapper::*,
+  crate::common::Wrapper,
   derive_more::*,
   nalgebra as na,
   std::ops
@@ -148,6 +148,11 @@ where na::Const<D>: na::ToTypenum
 
   pub fn normalize(&self) -> Direction<D, S> {
     Direction { inner: na::Unit::new_normalize(self.inner), _phantom: self._phantom }
+  }
+
+  pub fn normalize_with_norm(&self) -> (Direction<D, S>, Float) {
+    let (inner, norm) = na::Unit::new_and_get(self.inner);
+    (Direction { inner, _phantom: self._phantom }, norm)
   }
 
   pub fn norm(&self) -> Float { self.inner.norm() }
@@ -333,10 +338,10 @@ pub type Direction3<S> = Direction<3, S>;
 
 /* #region World Space Structures */
 
-// pub type WorldPoint = Point3<WorldSpace>;
+pub type WorldPoint = Point3<WorldSpace>;
 
 pub type WorldVector = Vector3<WorldSpace>;
 
-// pub type WorldDirection = Direction3<WorldSpace>;
+pub type WorldDirection = Direction3<WorldSpace>;
 
 /* #endregion */

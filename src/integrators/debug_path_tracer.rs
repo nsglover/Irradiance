@@ -13,7 +13,7 @@
 // impl IntegratorParameters for PathTracerParameters {
 //   fn build_integrator(
 //     &self,
-//     surfaces: Box<dyn SurfaceGroup>
+//     surfaces: Rc<dyn SurfaceGroup>
 //   ) -> Result<Box<dyn Integrator + Sync + Send>, Box<dyn std::error::Error>> {
 //     Ok(Box::new(DebugPathTracer { max_bounces: self.max_bounces, surfaces }))
 //   }
@@ -22,7 +22,7 @@
 // #[derive(Debug)]
 // pub struct DebugPathTracer {
 //   max_bounces: usize,
-//   surfaces: Box<dyn SurfaceGroup>
+//   surfaces: Rc<dyn SurfaceGroup>
 // }
 
 // impl DebugPathTracer {

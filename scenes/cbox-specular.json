@@ -18,7 +18,7 @@
   "integrator":
   {
     "type": "material-path-tracer",
-    "average-path-length": 1024
+    "average-path-length": 256
   },
 	"materials": [
 		{
@@ -137,13 +137,13 @@
 		},
 		{
 			"type": "sphere",
-			"transform": { "translate": [140,-177.5,100] },
+			"transform": [ { "translate": [140,-177.5,100] } ],
 			"radius": 100,
 			"material": "glass"
 		},
 		{
 			"type": "sphere",
-			"transform": { "translate": [-140,-177.5,-100] },
+			"transform":[ { "translate": [-140,-177.5,-100] } ],
 			"radius": 100,
 			"material": "metal"
 		}

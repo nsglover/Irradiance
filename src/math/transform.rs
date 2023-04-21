@@ -117,7 +117,6 @@ impl<In: Space<3>, Out: Space<3>> Transform<In, Out> {
     RayIntersection {
       ray: transformed_ray,
       surface: ray_intersection.surface,
-      material: ray_intersection.material,
       intersect_time: ray_intersection.intersect_time * time_dilation,
       intersect_point: self.point(&ray_intersection.intersect_point),
       geometric_normal: self.normal(&ray_intersection.geometric_normal),
@@ -175,7 +174,6 @@ impl<In: Space<3>, Out: Space<3>> Transform<In, Out> {
     RayIntersection {
       ray: transformed_ray,
       surface: ray_intersection.surface,
-      material: ray_intersection.material,
       intersect_time: ray_intersection.intersect_time * time_dilation,
       intersect_point: self.inverse_point(&ray_intersection.intersect_point),
       geometric_normal: self.inverse_normal(&ray_intersection.geometric_normal),

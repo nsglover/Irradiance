@@ -16,3 +16,7 @@ pub const PI: Float = std::f64::consts::PI as Float;
 // {
 //   v0 * (1.0 - t) + v1 * t
 // }
+
+// pub fn scalar_linear_interpolate(t: Float, v0: Float, v1: Float) -> Float {
+//   v0 * (1.0 - t) + v1 * t
+// }

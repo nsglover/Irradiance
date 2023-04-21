@@ -17,7 +17,7 @@
 	},
   "integrator":
   {
-    "type": "material-path-tracer",
+    "type": "mixture-path-tracer",
     "average-path-length": 256
   },
 	"materials": [
@@ -41,16 +41,6 @@
 			"name": "light",
 			"emit": {"type": "constant", "color": 1},
       "intensity": 15
-		},
-		{
-			"type": "lambertian",
-			"name": "redsphere",
-			"albedo": {"type": "constant", "color": [0.75, 0.25, 0.25]}
-		},
-		{
-			"type": "lambertian",
-			"name": "greensphere",
-			"albedo": {"type": "constant", "color": [0.25, 0.75, 0.25]}
 		}
 	],
 	"surfaces": [
@@ -133,18 +123,6 @@
 			],
 			"size": [130,130],
 			"material": "light"
-		},
-		{
-			"type": "sphere",
-			"transform": { "translate": [140,-177.5,100] },
-			"radius": 100,
-			"material": "greensphere"
-		},
-		{
-			"type": "sphere",
-			"transform": { "translate": [-140,-177.5,-100] },
-			"radius": 100,
-			"material": "redsphere"
 		}
 	]
 }

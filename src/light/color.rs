@@ -1,5 +1,5 @@
 use {
-  crate::{math::*, wrapper::*},
+  crate::{common::Wrapper, math::*},
   derive_more::{Add, AddAssign, Div, DivAssign, Mul, MulAssign},
   nalgebra as na,
   serde::Deserialize

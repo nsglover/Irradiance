@@ -1,5 +1,10 @@
 use {
-  crate::{materials::MaterialParameters, math::*, raytracing::*},
+  crate::{
+    materials::{Material, MaterialParameters},
+    math::*,
+    raytracing::*,
+    samplers::Sampler
+  },
   std::{collections::HashMap, fmt::Debug}
 };
 
@@ -14,7 +19,17 @@ pub trait SurfaceParameters: Debug {
 pub trait Surface: Debug {
   fn world_bounding_box(&self) -> WorldBoundingBox;
 
-  fn intersect_world_ray(&self, ray: WorldRay) -> Option<WorldRayIntersection>;
+  fn intersect_world_ray(&self, ray: &WorldRay) -> Option<WorldRayIntersection>;
+
+  fn interesting_direction_sample(
+    &self,
+    point: &WorldPoint,
+    sampler: &mut dyn Sampler
+  ) -> (WorldDirection, Float);
+
+  fn intersecting_direction_pdf(&self, point: &WorldPoint, direction: &WorldDirection) -> Float;
+
+  fn material(&self) -> &dyn Material;
 }
 
 pub trait TransformedSurface {
@@ -26,6 +41,20 @@ pub trait TransformedSurface {
 
   fn intersect_ray(&self, ray: Ray3<Self::LocalSpace>)
     -> Option<RayIntersection<Self::LocalSpace>>;
+
+  fn interesting_direction_sample(
+    &self,
+    point: &Point3<Self::LocalSpace>,
+    sampler: &mut dyn Sampler
+  ) -> (Direction3<Self::LocalSpace>, Float);
+
+  fn intersecting_direction_pdf(
+    &self,
+    point: &Point3<Self::LocalSpace>,
+    direction: &Direction3<Self::LocalSpace>
+  ) -> Float;
+
+  fn material(&self) -> &dyn Material;
 }
 
 // TODO: Move this to transform class
@@ -56,9 +85,25 @@ impl<T: TransformedSurface + Debug> Surface for T {
     }
   }
 
-  fn intersect_world_ray(&self, ray: WorldRay) -> Option<WorldRayIntersection> {
-    self
-      .intersect_ray(self.local_to_world().inverse_ray(&ray))
-      .map(|local_hit| self.local_to_world().ray_intersect(&local_hit))
+  fn intersect_world_ray(&self, ray: &WorldRay) -> Option<WorldRayIntersection> {
+    let tr = self.local_to_world();
+    self.intersect_ray(tr.inverse_ray(ray)).map(|local_hit| tr.ray_intersect(&local_hit))
   }
+
+  fn interesting_direction_sample(
+    &self,
+    point: &WorldPoint,
+    sampler: &mut dyn Sampler
+  ) -> (WorldDirection, Float) {
+    let tr = self.local_to_world();
+    let (dir, pdf) = self.interesting_direction_sample(&tr.inverse_point(point), sampler);
+    (tr.direction(&dir), pdf)
+  }
+
+  fn intersecting_direction_pdf(&self, point: &WorldPoint, direction: &WorldDirection) -> Float {
+    let tr = self.local_to_world();
+    self.intersecting_direction_pdf(&tr.inverse_point(point), &tr.inverse_direction(direction))
+  }
+
+  fn material(&self) -> &dyn Material { self.material() }
 }

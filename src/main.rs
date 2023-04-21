@@ -5,6 +5,7 @@ use {
 };
 
 mod camera;
+mod common;
 mod integrators;
 mod light;
 mod materials;
@@ -15,31 +16,41 @@ mod samplers;
 mod surface_groups;
 mod surfaces;
 mod textures;
-mod wrapper;
 
 // For the semester:
 
 // Project Features:
+// TODO: K-D Tree
 // TODO: Photon mapping
+// TODO: Unbiased photon mapping
+// TODO: If time permits, MIS with unbiased photon mapping and material path tracing
 
 // Important Features:
-// TODO: Russian roulette ray termination
-// TODO: General MIS (from any number of integrators)
+// TODO: Direct-lighting MIS and mixture sampling
 // TODO: Stratified sampling
+// TODO: Mesh loading and the triangle surface
 // TODO: Image loading and image texture
-// TODO: Mesh loading and the triangle mesh surface
 
 // For summer:
 
-// Minor Improvements:
-// TODO: Stop cloning rays
-// TODO: Better system for transform inverses
-// TODO: Optimize transform system
-// TODO: Slightly overhaul math module to be even safer and much easier to use
+// Important Features:
+// TODO: Overhaul the whole material sampling interface and also the PDF interface for surface
+//       (perhaps use some sort of PositiveReal type?). Make a generalized random variable trait and
+//       a BRDF class; materials are nothing more than a BRDF and a random variable, which aim to
+//       to importance sample everything but the L_i term in the rendering equation.
+// TODO: Generalize MIS and mixture integrators to work with any number of arbitrary integrators
+
+// Improvements:
+// TODO: Overhaul vector.rs to be even safer and much easier to use
+// TODO: Overhaul transform.rs to increase performance and reduce code duplication
+// TODO: Materials should have references (not boxes) to textures
+// TODO: Surfaces should have references (not boxes) to materials
+// TODO: Stop cloning rays in BVH
 
 // Side Features:
 // TODO: Perlin noise
-// TODO: Blend material (from any number of materials)
+// TODO: Blend material (from any number of materials, which can be implemented using the original
+//       one that just works for two.)
 // TODO: Environment map
 // TODO: Generalize camera image plane to arbitrary lens surfaces
 
@@ -51,7 +62,7 @@ struct Arguments {
   #[arg(short = 'o', long)]
   image_file: Option<String>,
 
-  #[arg(short = 's', long = "sub-img-size")]
+  #[arg(short = 's', long = "subimage-size")]
   subimage_edge_length: u32,
 
   #[arg(short = 'j', long = "threads", default_value_t = 1)]

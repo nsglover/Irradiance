@@ -1,6 +1,6 @@
 use {
   super::*,
-  crate::{raytracing::*, samplers::*, textures::*},
+  crate::{math::Float, raytracing::*, samplers::*, textures::*},
   serde::Deserialize
 };
 
@@ -29,4 +29,8 @@ impl Material for Mirror {
     let ray = Ray::new(hit.intersect_point, (-hit.ray.dir()).reflect_about(hit.shading_normal));
     MaterialSample::specular(self.albedo.value(hit), ray)
   }
+
+  fn is_emissive(&self) -> bool { false }
+
+  fn pdf(&self, _: &WorldRayIntersection, _: &WorldRay) -> Option<Float> { None }
 }

@@ -1,7 +1,8 @@
 use {
   super::*,
   crate::{
-    light::*, materials::ReflectionType, math::Float, raytracing::*, samplers::*, surface_groups::*
+    integrators::IntegratorParameters, light::Color, materials::ReflectionType, math::Float,
+    raytracing::*, samplers::Sampler, surface_groups::SurfaceGroup
   },
   serde::Deserialize,
   std::rc::Rc
@@ -14,13 +15,13 @@ struct Parameters {
   average_path_length: usize
 }
 
-#[typetag::deserialize(name = "material-path-tracer")]
+#[typetag::deserialize(name = "mixture-path-tracer")]
 impl IntegratorParameters for Parameters {
   fn build_integrator(
     &self,
     surfaces: Rc<dyn SurfaceGroup>
   ) -> Result<Box<dyn Integrator + Sync + Send>, Box<dyn std::error::Error>> {
-    Ok(Box::new(MaterialPathTracer {
+    Ok(Box::new(MixturePathTracer {
       surfaces,
       path_termination_probability: 1.0 / (self.average_path_length as Float),
       background: Color::black()
@@ -28,13 +29,13 @@ impl IntegratorParameters for Parameters {
   }
 }
 
-pub struct MaterialPathTracer {
-  pub(super) surfaces: Rc<dyn SurfaceGroup>,
-  pub(super) path_termination_probability: Float,
-  pub(super) background: Color
+pub struct MixturePathTracer {
+  surfaces: Rc<dyn SurfaceGroup>,
+  path_termination_probability: Float,
+  background: Color
 }
 
-impl PathTraceIntegrator for MaterialPathTracer {
+impl PathTraceIntegrator for MixturePathTracer {
   fn initial_path_terminator(&self, ray: WorldRay) -> PathTerminator {
     PathTerminator::new(ray, self.path_termination_probability)
   }
@@ -49,7 +50,17 @@ impl PathTraceIntegrator for MaterialPathTracer {
       let radiance_emitted = sample.emission.unwrap_or(Color::black());
 
       if let Some((attenuation, scattered_ray, reflection_type)) = sample.reflection {
-        Ok((radiance_emitted, attenuation, scattered_ray, reflection_type))
+        if let ReflectionType::Diffuse(..) = reflection_type {
+          let ray_dir;
+          let pdf;
+          if sampler.next() < 0.5 {
+            let (light_dir, light_pdf) =
+              self.surfaces.sample_and_pdf(&hit.intersect_point, sampler);
+            ray_dir = light_dir;
+          }
+        } else {
+          return Ok((radiance_emitted, attenuation, scattered_ray, reflection_type));
+        }
       } else {
         Err(radiance_emitted)
       }
@@ -59,6 +70,6 @@ impl PathTraceIntegrator for MaterialPathTracer {
   }
 }
 
-unsafe impl Sync for MaterialPathTracer {}
+unsafe impl Sync for MixturePathTracer {}
 
-unsafe impl Send for MaterialPathTracer {}
+unsafe impl Send for MixturePathTracer {}

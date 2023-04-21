@@ -36,4 +36,11 @@ impl Material for Lambertian {
 
     MaterialSample::diffuse(color, scattered_ray, pdf)
   }
+
+  fn is_emissive(&self) -> bool { false }
+
+  fn pdf(&self, hit: &WorldRayIntersection, sample: &WorldRay) -> Option<Float> {
+    let pdf = Float::max(0.0, sample.dir().dot(&hit.shading_normal) / PI);
+    (pdf > 0.0).then_some(pdf)
+  }
 }

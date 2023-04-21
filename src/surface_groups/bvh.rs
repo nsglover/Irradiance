@@ -2,7 +2,8 @@ use {
   super::{surface_list::*, *},
   crate::{math::*, raytracing::*, surfaces::Surface},
   rand::{distributions::Uniform, Rng},
-  serde_derive::Deserialize
+  serde_derive::Deserialize,
+  std::rc::Rc
 };
 
 #[derive(Debug, Clone, Copy, Deserialize)]
@@ -28,8 +29,9 @@ impl SurfaceGroupParameters for BvhParameters {
   fn build_surface_group(
     &self,
     surfaces: Vec<Box<dyn Surface>>
-  ) -> Result<Box<dyn SurfaceGroup>, Box<dyn std::error::Error>> {
-    Ok(Box::new(BoundingVolumeHierarchy::build(surfaces, self)))
+  ) -> Result<Rc<dyn SurfaceGroup>, Box<dyn std::error::Error>> {
+    // Ok(Box::new(BoundingVolumeHierarchy::build(surfaces, self)))
+    todo!()
   }
 }
 
@@ -63,15 +65,14 @@ impl BvhNode {
               maybe_hit
             },
             (Some(left_hit), Some(right_hit)) => {
-              let left_time = left_hit.intersect_time;
-              let right_time = right_hit.intersect_time;
-              if left_time < right_time {
-                ray.set_max_intersect_time(left_time);
-                Some(left_hit)
+              let hit = if left_hit.intersect_time < right_hit.intersect_time {
+                left_hit
               } else {
-                ray.set_max_intersect_time(right_time);
-                Some(right_hit)
-              }
+                right_hit
+              };
+
+              ray.set_max_intersect_time(hit.intersect_time);
+              Some(hit)
             }
           }
         }
@@ -149,5 +150,15 @@ impl SurfaceGroup for BoundingVolumeHierarchy {
 
   fn intersect_world_ray(&self, ray: WorldRay) -> Option<WorldRayIntersection> {
     self.root_node.intersect(ray)
+  }
+
+  fn emitters_pdf(&self, point: WorldPoint, sample: WorldDirection) -> Float { todo!() }
+
+  fn emitters_sample_and_pdf(
+    &self,
+    point: WorldPoint,
+    sampler: &mut dyn crate::samplers::Sampler
+  ) -> (WorldDirection, Float) {
+    todo!()
   }
 }

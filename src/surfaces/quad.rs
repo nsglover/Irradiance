@@ -4,6 +4,7 @@ use {
     materials::{Material, MaterialParameters},
     math::*,
     raytracing::*,
+    samplers::Sampler,
     textures::TextureCoordinates
   },
   nalgebra as na,
@@ -34,7 +35,8 @@ impl SurfaceParameters for QuadSurfaceParameters {
 
     Box::new(QuadSurface {
       transform: self.transform.clone().build_transform() * scale,
-      material: materials.get(&self.material).unwrap().build_material()
+      material: materials.get(&self.material).unwrap().build_material(),
+      normal: Vector3::from(na::vector![0.0, 0.0, 1.0]).normalize()
     })
   }
 }
@@ -47,7 +49,8 @@ impl Space<3> for QuadSpace {}
 #[derive(Debug)]
 pub struct QuadSurface {
   transform: LocalToWorld<QuadSpace>,
-  material: Box<dyn Material>
+  material: Box<dyn Material>,
+  normal: Direction3<<Self as TransformedSurface>::LocalSpace>
 }
 
 impl TransformedSurface for QuadSurface {
@@ -75,19 +78,44 @@ impl TransformedSurface for QuadSurface {
         return None;
       }
 
-      let normal = Vector3::from(na::vector![0.0, 0.0, 1.0]).normalize();
       let tex_coords = TextureCoordinates::from(na::vector![p.x + 0.5, p.y + 0.5]);
-
       Some(RayIntersection {
         ray,
         surface: self,
-        material: self.material.as_ref(),
         intersect_time: t,
         intersect_point: p.into(),
-        geometric_normal: normal,
-        shading_normal: normal,
+        geometric_normal: self.normal,
+        shading_normal: self.normal,
         tex_coords
       })
     })
   }
+
+  fn interesting_direction_sample(
+    &self,
+    point: &Point3<Self::LocalSpace>,
+    sampler: &mut dyn Sampler
+  ) -> (Direction3<Self::LocalSpace>, Float) {
+    let surface_point = na::point![sampler.next() - 0.5, sampler.next() - 0.5, 0.0];
+    let (direction, dist) = (Point3::from(surface_point) - *point).normalize_with_norm();
+    let cosine = direction.dot(&self.normal);
+
+    // PDF is dist^2 / (cosine * area), and area is 1
+    (direction, dist * dist / cosine)
+  }
+
+  fn intersecting_direction_pdf(
+    &self,
+    point: &Point3<Self::LocalSpace>,
+    direction: &Direction3<Self::LocalSpace>
+  ) -> Float {
+    if let Some(hit) = self.intersect_ray(Ray3::new(*point, *direction)) {
+      let cosine = direction.dot(&hit.geometric_normal);
+      hit.intersect_time * hit.intersect_time / cosine
+    } else {
+      0.0
+    }
+  }
+
+  fn material(&self) -> &dyn Material { self.material.as_ref() }
 }

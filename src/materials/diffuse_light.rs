@@ -37,4 +37,8 @@ impl Material for DiffuseLight {
       MaterialSample::emission(self.light_color.value(hit) * self.light_intensity)
     }
   }
+
+  fn is_emissive(&self) -> bool { true }
+
+  fn pdf(&self, _: &WorldRayIntersection, _: &WorldRay) -> Option<Float> { None }
 }

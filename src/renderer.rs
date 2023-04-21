@@ -1,5 +1,3 @@
-use threadpool::Builder;
-
 use {
   crate::{
     camera::*, integrators::*, light::*, materials::MaterialParameters, math::*, samplers::*,
@@ -15,7 +13,7 @@ use {
     thread,
     time::Duration
   },
-  threadpool::ThreadPool
+  threadpool::{Builder, ThreadPool}
 };
 
 #[derive(Debug, Deserialize)]
@@ -164,7 +162,7 @@ impl Renderer {
       );
     }
 
-    if let Some((_, progress_bar_list, overall_progress_bar)) = maybe_progress_bars {
+    if let Some((_, progress_bar_list, overall_progress_bar)) = &maybe_progress_bars {
       while thread_pool.queued_count() > 0 {
         thread::sleep(Duration::from_millis(100));
         let total_progress: u64 = progress_bar_list.iter().map(|p| p.position()).sum();
@@ -175,12 +173,15 @@ impl Renderer {
           num_subimages as usize - (thread_pool.queued_count() + thread_pool.active_count()),
         ))
       }
-
-      overall_progress_bar.finish()
     };
 
-    // Wait for the threads to finish and return the resulting image.
+    // Wait for the threads and mark the overall progress bar as finished.
     thread_pool.join();
+    if let Some((_, _, overall_progress_bar)) = maybe_progress_bars {
+      overall_progress_bar.finish_with_message(format!("{}", num_subimages))
+    }
+
+    // Return the resulting image.
     Arc::into_inner(image_lock).unwrap().into_inner().unwrap().into()
   }
 
@@ -227,7 +228,7 @@ impl Renderer {
             let ray = camera.sample_ray_through_pixel(&mut ray_sampler, ray_x, ray_y);
 
             // Add the incoming radiance to our running average.
-            light += integrator.incoming_radiance(&mut integrator_sampler, ray);
+            light += integrator.radiance_estimate(&mut integrator_sampler, ray);
           }
 
           // Convert to sRGB, which is the color space expected by the image buffer
