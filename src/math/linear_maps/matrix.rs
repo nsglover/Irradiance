@@ -3,7 +3,6 @@ use std::{fmt::Display, ops};
 use nalgebra as na;
 
 use super::super::{phantom::*, *};
-use crate::raytracing::*;
 
 type Matrix<const D: usize> = na::SMatrix<Real, D, D>;
 
@@ -46,9 +45,7 @@ impl<In: Space<3>, Out: Space<3>> Transform<In, Out> for MatrixTransform<In, Out
     }
   }
 
-  fn matrix(&self) -> &MatrixTransform<In, Out> { self }
-
-  fn determinant(&self) -> Real { self.det }
+  fn matrix(&self) -> MatrixTransform<In, Out> { self.clone() }
 
   fn vector(&self, vector: &Vector3<In>) -> Vector3<Out> {
     (self.matrix * vector.inner.to_homogeneous()).xyz().into()
@@ -69,44 +66,6 @@ impl<In: Space<3>, Out: Space<3>> Transform<In, Out> for MatrixTransform<In, Out
     na::Unit::new_normalize(v).into()
   }
 
-  fn ray(&self, ray: &Ray3<In>) -> Ray3<Out> {
-    let dir: Vector3<In> = ray.dir().inner.into_inner().into();
-    let (transformed_dir, time_dilation) = self.vector(&dir).normalize_with_norm();
-
-    Ray3::new_with_time(
-      ray.max_intersect_time() * PositiveReal::new_unchecked(time_dilation),
-      self.point(&ray.origin()),
-      transformed_dir
-    )
-  }
-
-  fn ray_intersect<'a>(
-    &self,
-    ray_intersection: &RayIntersection<'a, In>
-  ) -> RayIntersection<'a, Out> {
-    let ray = &ray_intersection.ray;
-    let dir: Vector3<In> = ray.dir().inner.into_inner().into();
-    let (transformed_dir, time_dilation) = self.vector(&dir).normalize_with_norm();
-
-    let transformed_ray = Ray3::new_with_time(
-      ray.max_intersect_time() * PositiveReal::new_unchecked(time_dilation),
-      self.point(&ray.origin()),
-      transformed_dir
-    );
-
-    RayIntersection {
-      ray: transformed_ray,
-      surface: ray_intersection.surface,
-      intersect_time: ray_intersection.intersect_time * PositiveReal::new_unchecked(time_dilation),
-      intersect_point: self.point(&ray_intersection.intersect_point),
-      geometric_normal: self.normal(&ray_intersection.geometric_normal),
-      shading_normal: self.normal(&ray_intersection.shading_normal),
-      tex_coords: ray_intersection.tex_coords
-    }
-  }
-
-  fn inverse_determinant(&self) -> Real { self.det_inv }
-
   fn inverse_vector(&self, vector: &Vector3<Out>) -> Vector3<In> {
     (self.matrix_inv * vector.inner.to_homogeneous()).xyz().into()
   }
@@ -124,44 +83,6 @@ impl<In: Space<3>, Out: Space<3>> Transform<In, Out> for MatrixTransform<In, Out
   fn inverse_normal(&self, sn: &UnitVector3<Out>) -> UnitVector3<In> {
     let v = (self.matrix.transpose() * sn.inner.into_inner().to_homogeneous()).xyz();
     na::Unit::new_normalize(v).into()
-  }
-
-  fn inverse_ray(&self, ray: &Ray3<Out>) -> Ray3<In> {
-    let dir: Vector3<Out> = ray.dir().inner.into_inner().into();
-    let transformed_dir = self.inverse_vector(&dir);
-    let time_dilation = transformed_dir.norm();
-
-    Ray3::new_with_time(
-      ray.max_intersect_time() * PositiveReal::new_unchecked(time_dilation),
-      self.inverse_point(&ray.origin()),
-      na::Unit::new_unchecked((transformed_dir / time_dilation).inner).into()
-    )
-  }
-
-  fn inverse_ray_intersect<'a>(
-    &self,
-    ray_intersection: &RayIntersection<'a, Out>
-  ) -> RayIntersection<'a, In> {
-    let ray = &ray_intersection.ray;
-    let dir: Vector3<Out> = ray.dir().inner.into_inner().into();
-    let transformed_dir = self.inverse_vector(&dir);
-    let time_dilation = transformed_dir.norm();
-
-    let transformed_ray = Ray3::new_with_time(
-      ray.max_intersect_time() * PositiveReal::new_unchecked(time_dilation),
-      self.inverse_point(&ray.origin()),
-      na::Unit::new_unchecked((transformed_dir / time_dilation).inner).into()
-    );
-
-    RayIntersection {
-      ray: transformed_ray,
-      surface: ray_intersection.surface,
-      intersect_time: ray_intersection.intersect_time * PositiveReal::new_unchecked(time_dilation),
-      intersect_point: self.inverse_point(&ray_intersection.intersect_point),
-      geometric_normal: self.inverse_normal(&ray_intersection.geometric_normal),
-      shading_normal: self.inverse_normal(&ray_intersection.shading_normal),
-      tex_coords: ray_intersection.tex_coords
-    }
   }
 }
 

@@ -17,6 +17,10 @@ where Const<D>: ToTypenum
 impl<const D: usize, S: Space<D>> UnitVector<D, S>
 where Const<D>: ToTypenum
 {
+  pub fn cast_unsafe<T: Space<D>>(self) -> UnitVector<D, T> {
+    UnitVector { inner: self.inner, _phantom: Phantom::default() }
+  }
+
   pub fn reflect_about(&self, normal: UnitVector<D, S>) -> Self {
     let d = self.inner().into_inner();
     let n = normal.inner().into_inner();

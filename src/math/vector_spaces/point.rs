@@ -18,6 +18,10 @@ where Const<D>: ToTypenum
 impl<const D: usize, S: Space<D>> Point<D, S>
 where Const<D>: ToTypenum
 {
+  pub fn cast_unsafe<T: Space<D>>(self) -> Point<D, T> {
+    Point { inner: self.inner, _phantom: Phantom::default() }
+  }
+
   pub fn origin() -> Self { Self::from(na::Point::origin()) }
 }
 

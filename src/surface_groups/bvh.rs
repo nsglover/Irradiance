@@ -1,10 +1,10 @@
-use {
-  super::{surface_list::*, *},
-  crate::{math::*, raytracing::*, surfaces::Surface},
-  rand::{distributions::Uniform, Rng},
-  serde_derive::Deserialize,
-  std::rc::Rc
-};
+use std::rc::Rc;
+
+use rand::{distributions::Uniform, Rng};
+use serde_derive::Deserialize;
+
+use super::{surface_list::*, *};
+use crate::{math::*, raytracing::*, surfaces::Surface};
 
 #[derive(Debug, Clone, Copy, Deserialize)]
 pub enum PartitionStrategy {
@@ -119,8 +119,8 @@ impl BoundingVolumeHierarchy {
           let num_left = rand::thread_rng().sample(Uniform::new_inclusive(0, num_surfaces));
 
           surfaces.sort_by(|s1, s2| {
-            s1.world_bounding_box().center().inner()[axis]
-              .total_cmp(&(s2.world_bounding_box().center().inner()[axis]))
+            s1.world_bounding_box().center()[axis]
+              .total_cmp(&(s2.world_bounding_box().center()[axis]))
           });
 
           let mut surfaces_iter = surfaces.into_iter();
@@ -152,13 +152,13 @@ impl SurfaceGroup for BoundingVolumeHierarchy {
     self.root_node.intersect(ray)
   }
 
-  fn emitters_pdf(&self, point: WorldPoint, sample: WorldDirection) -> Float { todo!() }
+  fn pdf(&self, point: &WorldPoint, direction: &WorldUnitVector) -> Real { todo!() }
 
-  fn emitters_sample_and_pdf(
+  fn sample_and_pdf(
     &self,
-    point: WorldPoint,
+    point: &WorldPoint,
     sampler: &mut dyn crate::samplers::Sampler
-  ) -> (WorldDirection, Float) {
+  ) -> (WorldUnitVector, Real) {
     todo!()
   }
 }

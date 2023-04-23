@@ -23,6 +23,7 @@ mod textures;
 // TODO: Photon mapping
 // TODO: Unbiased photon mapping
 // TODO: If time permits, MIS with unbiased photon mapping and material path tracing
+// TODO: README.md
 
 // Important Features:
 // TODO: Mesh loading and the triangle surface
@@ -40,7 +41,6 @@ mod textures;
 // TODO: Generalize MIS and mixture integrators to work with any number of arbitrary integrators
 
 // Improvements:
-// TODO: Overhaul transform.rs to increase performance and reduce code duplication
 // TODO: Materials should have references (not boxes) to textures
 // TODO: Surfaces should have references (not boxes) to materials
 // TODO: Stop cloning rays in BVH
