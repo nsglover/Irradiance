@@ -1,9 +1,9 @@
-use {
-  super::*,
-  crate::{light::*, materials::ReflectionType, raytracing::*, samplers::*, surface_groups::*},
-  serde::Deserialize,
-  std::rc::Rc
-};
+use std::rc::Rc;
+
+use serde::Deserialize;
+
+use super::*;
+use crate::{light::*, materials::ReflectionType, raytracing::*, samplers::*, surface_groups::*};
 
 // TODO: Add background to this
 #[derive(Debug, Deserialize)]

@@ -1,8 +1,7 @@
-use {
-  super::{Texture, TextureParameters},
-  crate::{light::*, raytracing::*},
-  serde::Deserialize
-};
+use serde::Deserialize;
+
+use super::{Texture, TextureParameters};
+use crate::{light::*, raytracing::*};
 
 #[derive(Debug, Clone, Copy, Deserialize)]
 pub struct ConstantTextureParameters {

@@ -1,7 +1,6 @@
-use {
-  super::phantom::Phantom,
-  nalgebra::{Const, ToTypenum}
-};
+use nalgebra::{Const, ToTypenum};
+
+use super::super::phantom::Phantom;
 
 pub trait Space<const D: usize>: Clone + Copy + std::fmt::Debug
 where Const<D>: ToTypenum

@@ -1,9 +1,8 @@
-use {
-  crate::{
-    light::*, materials::ReflectionType, raytracing::*, samplers::Sampler,
-    surface_groups::SurfaceGroup
-  },
-  std::{error::Error, fmt::Debug, rc::Rc}
+use std::{error::Error, fmt::Debug, rc::Rc};
+
+use crate::{
+  light::*, materials::ReflectionType, raytracing::*, samplers::Sampler,
+  surface_groups::SurfaceGroup
 };
 
 #[typetag::deserialize(tag = "type")]

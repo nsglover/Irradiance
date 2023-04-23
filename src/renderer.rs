@@ -1,19 +1,19 @@
-use {
-  crate::{
-    camera::*, integrators::*, light::*, materials::MaterialParameters, math::*, samplers::*,
-    surface_groups::SurfaceGroupParameters, surfaces::SurfaceParameters, RenderSettings
-  },
-  image::{DynamicImage, ImageBuffer, Rgb},
-  indicatif::{MultiProgress, ProgressBar, ProgressDrawTarget, ProgressStyle},
-  serde::Deserialize,
-  serde_json::Value,
-  std::{
-    error::Error,
-    sync::{Arc, Mutex},
-    thread,
-    time::Duration
-  },
-  threadpool::{Builder, ThreadPool}
+use std::{
+  error::Error,
+  sync::{Arc, Mutex},
+  thread,
+  time::Duration
+};
+
+use image::{DynamicImage, ImageBuffer, Rgb};
+use indicatif::{MultiProgress, ProgressBar, ProgressDrawTarget, ProgressStyle};
+use serde::Deserialize;
+use serde_json::Value;
+use threadpool::{Builder, ThreadPool};
+
+use crate::{
+  camera::*, integrators::*, light::*, materials::MaterialParameters, math::*, samplers::*,
+  surface_groups::SurfaceGroupParameters, surfaces::SurfaceParameters, RenderSettings
 };
 
 #[derive(Debug, Deserialize)]
@@ -210,7 +210,7 @@ impl Renderer {
       }
 
       // Precompute 1 / samples_per_pixel to save some time.
-      let inv_spp = 1.0 / (samples_per_pixel as Float);
+      let inv_spp = 1.0 / (samples_per_pixel as Real);
 
       // Build samplers for this subimage thread.
       let mut ray_sampler = IndependentSampler::new();
@@ -223,8 +223,8 @@ impl Renderer {
           let mut light = Color::black();
           for _ in 0..samples_per_pixel {
             // Generate a slightly jittered ray through pixel (x, y).
-            let ray_x = (sub_x + x) as Float + ray_sampler.next();
-            let ray_y = (sub_y + y) as Float + ray_sampler.next();
+            let ray_x = ray_sampler.next() + (sub_x + x) as Real;
+            let ray_y = ray_sampler.next() + (sub_y + y) as Real;
             let ray = camera.sample_ray_through_pixel(&mut ray_sampler, ray_x, ray_y);
 
             // Add the incoming radiance to our running average.

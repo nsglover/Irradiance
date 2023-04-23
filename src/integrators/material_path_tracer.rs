@@ -1,10 +1,10 @@
-use {
-  super::*,
-  crate::{
-    light::*, materials::ReflectionType, math::Float, raytracing::*, samplers::*, surface_groups::*
-  },
-  serde::Deserialize,
-  std::rc::Rc
+use std::rc::Rc;
+
+use serde::Deserialize;
+
+use super::*;
+use crate::{
+  light::*, materials::ReflectionType, math::Real, raytracing::*, samplers::*, surface_groups::*
 };
 
 // TODO: Add background to this
@@ -22,7 +22,7 @@ impl IntegratorParameters for Parameters {
   ) -> Result<Box<dyn Integrator + Sync + Send>, Box<dyn std::error::Error>> {
     Ok(Box::new(MaterialPathTracer {
       surfaces,
-      path_termination_probability: 1.0 / (self.average_path_length as Float),
+      path_termination_probability: 1.0 / (self.average_path_length as Real),
       background: Color::black()
     }))
   }
@@ -30,7 +30,7 @@ impl IntegratorParameters for Parameters {
 
 pub struct MaterialPathTracer {
   pub(super) surfaces: Rc<dyn SurfaceGroup>,
-  pub(super) path_termination_probability: Float,
+  pub(super) path_termination_probability: Real,
   pub(super) background: Color
 }
 

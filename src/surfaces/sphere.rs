@@ -1,19 +1,19 @@
-use {
-  super::*,
-  crate::{
-    materials::{Material, MaterialParameters},
-    math::*,
-    raytracing::*,
-    samplers::Sampler
-  },
-  serde::Deserialize,
-  std::collections::HashMap
+use std::collections::HashMap;
+
+use serde::Deserialize;
+
+use super::*;
+use crate::{
+  common::Wrapper,
+  materials::{Material, MaterialParameters},
+  math::*,
+  raytracing::*,
+  samplers::Sampler
 };
 
 #[derive(Debug, Deserialize)]
 pub struct SphereSurfaceParameters {
   transform: TransformParameters,
-  radius: Float,
   material: String
 }
 
@@ -23,11 +23,8 @@ impl SurfaceParameters for SphereSurfaceParameters {
     &self,
     materials: &HashMap<String, Box<dyn MaterialParameters>>
   ) -> Box<dyn Surface> {
-    let scale_mat = nalgebra::Matrix4::new_scaling(self.radius);
-    let scale: LocalToWorld<_> = Transform::from_raw(scale_mat).unwrap();
-
     Box::new(SphereSurface {
-      transform: self.transform.clone().build_transform() * scale,
+      transform: self.transform.clone().build_transform(),
       material: materials.get(&self.material).unwrap().build_material()
     })
   }
@@ -78,10 +75,10 @@ impl TransformedSurface for SphereSurface {
 
     let p;
     let t;
-    if let Some(p1) = ray.at(t1) {
+    if let Some((t1, p1)) = ray.at_real(t1) {
       t = t1;
       p = p1
-    } else if let Some(p2) = ray.at(t2) {
+    } else if let Some((t2, p2)) = ray.at_real(t2) {
       t = t2;
       p = p2
     } else {
@@ -99,7 +96,7 @@ impl TransformedSurface for SphereSurface {
       ray,
       surface: self,
       intersect_time: t,
-      intersect_point: Vector3::from(normalized_p).into(),
+      intersect_point: Point::from_vector(normalized_p.into_vector()),
       geometric_normal: normalized_p,
       shading_normal: normalized_p,
       tex_coords: Vector::from_array([u, v])
@@ -110,7 +107,7 @@ impl TransformedSurface for SphereSurface {
     &self,
     _point: &Point3<Self::LocalSpace>,
     _sampler: &mut dyn Sampler
-  ) -> (Direction3<Self::LocalSpace>, Float) {
+  ) -> (UnitVector3<Self::LocalSpace>, Real) {
     // ALREADY WRITTEN:
     // let radius = 1.0;
     // let (mut direction, distance) = Vector::from(point).normalize_with_norm();
@@ -151,8 +148,8 @@ impl TransformedSurface for SphereSurface {
   fn intersecting_direction_pdf(
     &self,
     _point: &Point3<Self::LocalSpace>,
-    _direction: &Direction3<Self::LocalSpace>
-  ) -> Float {
+    _direction: &UnitVector3<Self::LocalSpace>
+  ) -> Real {
     todo!()
   }
 

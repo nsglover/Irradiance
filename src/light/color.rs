@@ -1,15 +1,14 @@
-use {
-  crate::{common::Wrapper, math::*},
-  derive_more::{Add, AddAssign, Div, DivAssign, Mul, MulAssign},
-  nalgebra as na,
-  serde::Deserialize
-};
+use derive_more::{Add, AddAssign, Div, DivAssign, Mul, MulAssign};
+use nalgebra as na;
+use serde::Deserialize;
+
+use crate::math::*;
 
 #[derive(Clone, Copy, Debug, Deserialize)]
 #[serde(untagged)]
 pub enum ColorParameters {
-  Array([Float; 3]),
-  Single(Float)
+  Array([Real; 3]),
+  Single(Real)
 }
 
 impl ColorParameters {
@@ -23,11 +22,11 @@ impl ColorParameters {
 
 #[derive(Debug, Clone, Copy, Add, AddAssign, Mul, MulAssign, Div, DivAssign)]
 pub struct Color {
-  pub inner: na::Vector3<Float>
+  pub inner: na::Vector3<Real>
 }
 
 impl Color {
-  pub fn new(r: Float, g: Float, b: Float) -> Self { Self { inner: na::Vector3::new(r, g, b) } }
+  pub fn new(r: Real, g: Real, b: Real) -> Self { Self { inner: na::Vector3::new(r, g, b) } }
 
   pub fn black() -> Self { na::Vector3::new(0.0, 0.0, 0.0).into() }
 
@@ -45,13 +44,13 @@ impl Color {
 
   pub fn yellow() -> Self { na::Vector3::new(1.0, 1.0, 0.0).into() }
 
-  pub fn r(&self) -> Float { self.inner.x }
+  pub fn r(&self) -> Real { self.inner.x }
 
-  pub fn g(&self) -> Float { self.inner.y }
+  pub fn g(&self) -> Real { self.inner.y }
 
-  pub fn b(&self) -> Float { self.inner.z }
+  pub fn b(&self) -> Real { self.inner.z }
 
-  pub fn luminance(&self) -> Float {
+  pub fn luminance(&self) -> Real {
     self.inner.x * 0.212671 + self.inner.y * 0.715160 + self.inner.z * 0.072169
   }
 
@@ -74,14 +73,14 @@ impl std::ops::MulAssign for Color {
   fn mul_assign(&mut self, rhs: Self) { self.inner.component_mul_assign(&rhs.inner) }
 }
 
-impl From<na::Vector3<Float>> for Color {
-  fn from(raw: na::Vector3<Float>) -> Self { Self { inner: raw } }
+impl From<na::Vector3<Real>> for Color {
+  fn from(raw: na::Vector3<Real>) -> Self { Self { inner: raw } }
 }
 
-impl From<Color> for na::Vector3<Float> {
+impl From<Color> for na::Vector3<Real> {
   fn from(val: Color) -> Self { val.inner }
 }
 
-impl Wrapper<na::Vector3<Float>> for Color {
-  fn raw(&self) -> &na::Vector3<Float> { &self.inner }
-}
+// impl Wrapper<na::Vector3<Real>> for Color {
+//   fn inner(&self) -> &na::Vector3<Real> { &self.inner }
+// }

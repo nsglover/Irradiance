@@ -1,9 +1,9 @@
-use {
-  super::*,
-  crate::{math::*, raytracing::*, samplers::Sampler, surfaces::Surface},
-  serde::Deserialize,
-  std::rc::Rc
-};
+use std::rc::Rc;
+
+use serde::Deserialize;
+
+use super::*;
+use crate::{math::*, raytracing::*, samplers::Sampler, surfaces::Surface};
 
 #[derive(Debug, Deserialize)]
 pub struct SurfaceListParameters {}
@@ -54,21 +54,22 @@ impl SurfaceGroup for SurfaceList {
     closest
   }
 
-  fn pdf(&self, point: &WorldPoint, direction: &WorldDirection) -> Float {
+  fn pdf(&self, point: &WorldPoint, direction: &WorldUnitVector) -> Real {
     self
       .emitter_indices
       .iter()
       .map(|i| self.surfaces[*i].0.intersecting_direction_pdf(point, direction))
-      .sum::<Float>()
-      / (self.emitter_indices.len() as Float)
+      .sum::<Real>()
+      / (self.emitter_indices.len() as Real)
   }
 
   fn sample_and_pdf(
     &self,
     point: &WorldPoint,
     sampler: &mut dyn Sampler
-  ) -> (WorldDirection, Float) {
-    let index = (sampler.next_non_one() * (self.emitter_indices.len() as Float)) as usize;
+  ) -> (WorldUnitVector, Real) {
+    let num_emitters = self.emitter_indices.len() as Real;
+    let index = (sampler.next_non_one().into_inner() * num_emitters) as usize;
     let emitter = &self.surfaces[self.emitter_indices[index]].0;
     let direction = emitter.interesting_direction_sample(point, sampler).0;
     let pdf = self.pdf(point, &direction);

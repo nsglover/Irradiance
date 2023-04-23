@@ -1,11 +1,10 @@
-use {
-  crate::{
-    math::{Float, WorldDirection, WorldPoint},
-    raytracing::*,
-    samplers::Sampler,
-    surfaces::Surface
-  },
-  std::{error::Error, fmt::Debug, rc::Rc}
+use std::{error::Error, fmt::Debug, rc::Rc};
+
+use crate::{
+  math::{Real, WorldPoint, WorldUnitVector},
+  raytracing::*,
+  samplers::Sampler,
+  surfaces::Surface
 };
 
 #[typetag::deserialize(tag = "type")]
@@ -21,15 +20,15 @@ pub trait SurfaceGroup: Debug {
 
   fn intersect_world_ray(&self, ray: WorldRay) -> Option<WorldRayIntersection>;
 
-  fn sample(&self, point: &WorldPoint, sampler: &mut dyn Sampler) -> WorldDirection {
+  fn sample(&self, point: &WorldPoint, sampler: &mut dyn Sampler) -> WorldUnitVector {
     self.sample_and_pdf(point, sampler).0
   }
 
-  fn pdf(&self, point: &WorldPoint, direction: &WorldDirection) -> Float;
+  fn pdf(&self, point: &WorldPoint, direction: &WorldUnitVector) -> Real;
 
   fn sample_and_pdf(
     &self,
     point: &WorldPoint,
     sampler: &mut dyn Sampler
-  ) -> (WorldDirection, Float);
+  ) -> (WorldUnitVector, Real);
 }

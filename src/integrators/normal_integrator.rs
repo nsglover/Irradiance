@@ -1,9 +1,9 @@
-use {
-  super::*,
-  crate::{light::*, raytracing::*, samplers::Sampler, surface_groups::SurfaceGroup},
-  serde::Deserialize,
-  std::rc::Rc
-};
+use std::rc::Rc;
+
+use serde::Deserialize;
+
+use super::*;
+use crate::{light::*, raytracing::*, samplers::Sampler, surface_groups::SurfaceGroup};
 
 #[derive(Debug, Deserialize)]
 pub struct NormalIntegratorParameters;

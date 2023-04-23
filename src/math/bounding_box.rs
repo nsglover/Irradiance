@@ -1,8 +1,7 @@
-use {
-  super::*,
-  crate::raytracing::*,
-  nalgebra::{Const, ToTypenum}
-};
+use nalgebra::{Const, ToTypenum};
+
+use super::*;
+use crate::{common::Wrapper, raytracing::*};
 
 #[derive(Debug)]
 pub struct BoundingBox<const D: usize, S: Space<D>>
@@ -15,12 +14,7 @@ where Const<D>: ToTypenum
 impl<const D: usize, S: Space<D>> BoundingBox<D, S>
 where Const<D>: ToTypenum
 {
-  pub fn new(min: Point<D, S>, max: Point<D, S>) -> Self {
-    // This prevents zero-volume boxes
-    // let offset = nalgebra::SVector::repeat(Float::EPSILON) * 8.0;
-    let offset = nalgebra::SVector::repeat(Float::EPSILON) * 0.0;
-    Self { min: (min.inner - offset).into(), max: (max.inner + offset).into() }
-  }
+  pub fn new(min: Point<D, S>, max: Point<D, S>) -> Self { Self { min, max } }
 
   pub fn is_empty(&self) -> bool {
     for i in 0..D {
@@ -49,11 +43,15 @@ where Const<D>: ToTypenum
   pub fn diagonal(&self) -> Vector<D, S> { self.max - self.min }
 
   pub fn ray_intersects(&self, ray: &Ray<D, S>) -> bool {
-    let (mut min_t, mut max_t) = ray.time_bounds();
+    let (min_t, max_t) = ray.time_bounds();
+    let (mut min_t, mut max_t) = (min_t.into_inner(), max_t.into_inner());
+    let origin = ray.origin().into_inner();
+    let dir = ray.dir().into_inner();
+
     for i in 0..D {
-      let inv_d = 1.0 / ray.dir().inner()[i];
-      let mut t0 = (self.min.inner[i] - ray.origin().inner()[i]) * inv_d;
-      let mut t1 = (self.max.inner[i] - ray.origin().inner()[i]) * inv_d;
+      let inv_d = 1.0 / dir[i];
+      let mut t0 = (self.min.inner[i] - origin[i]) * inv_d;
+      let mut t1 = (self.max.inner[i] - origin[i]) * inv_d;
       if inv_d < 0.0 {
         std::mem::swap(&mut t0, &mut t1);
       }
@@ -79,8 +77,8 @@ where Const<D>: ToTypenum
 {
   fn default() -> Self {
     Self {
-      min: Vector::from(nalgebra::SVector::repeat(Float::MAX)).into(),
-      max: Vector::from(nalgebra::SVector::repeat(Float::MIN)).into()
+      min: Point::from_raw(nalgebra::SVector::repeat(Real::MAX)),
+      max: Point::from_raw(nalgebra::SVector::repeat(Real::MIN))
     }
   }
 }
@@ -88,11 +86,11 @@ where Const<D>: ToTypenum
 pub type BoundingBox3<S> = BoundingBox<3, S>;
 
 impl<S: Space<3>> BoundingBox<3, S> {
-  pub fn surface_area(&self) -> Float {
+  pub fn surface_area(&self) -> Real {
     if self.is_empty() {
       0.0
     } else {
-      let extent = self.diagonal().inner();
+      let extent = self.diagonal().into_inner();
       2.0 * (extent.x * extent.z + extent.x * extent.y + extent.y * extent.z)
     }
   }

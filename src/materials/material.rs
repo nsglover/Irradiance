@@ -1,7 +1,6 @@
-use {
-  crate::{light::*, math::*, raytracing::*, samplers::Sampler},
-  std::fmt::Debug
-};
+use std::fmt::Debug;
+
+use crate::{light::*, math::*, raytracing::*, samplers::Sampler};
 
 #[typetag::deserialize(tag = "type")]
 pub trait MaterialParameters: Debug {
@@ -20,7 +19,7 @@ impl MaterialSample {
 
   pub fn emission(color: Color) -> Self { Self { emission: Some(color), reflection: None } }
 
-  pub fn diffuse(attenuation: Color, scattered_ray: WorldRay, sample_pdf: Float) -> Self {
+  pub fn diffuse(attenuation: Color, scattered_ray: WorldRay, sample_pdf: Real) -> Self {
     if sample_pdf == 0.0 {
       Self::nothing()
     } else {
@@ -48,7 +47,7 @@ pub enum ReflectionType {
   Specular,
 
   // Diffuse(PDF evaluated at the sampled reflection, PDF for for the entire random variable)
-  Diffuse(Float)
+  Diffuse(Real)
 }
 
 pub trait Material: Debug {
@@ -56,7 +55,7 @@ pub trait Material: Debug {
 
   fn sample(&self, hit: &WorldRayIntersection, sampler: &mut dyn Sampler) -> MaterialSample;
 
-  fn pdf(&self, hit: &WorldRayIntersection, scattered_ray: &WorldRay) -> Option<Float>;
+  fn pdf(&self, hit: &WorldRayIntersection, scattered_ray: &WorldRay) -> Option<Real>;
 
   fn is_emissive(&self) -> bool;
 }

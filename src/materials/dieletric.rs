@@ -1,14 +1,13 @@
-use {
-  super::*,
-  crate::{math::*, raytracing::*, samplers::*, textures::*},
-  serde::Deserialize
-};
+use serde::Deserialize;
+
+use super::*;
+use crate::{common::Wrapper, math::*, raytracing::*, samplers::*, textures::*};
 
 #[derive(Debug, Deserialize)]
 struct DieletricParameters {
   name: String,
   albedo: Box<dyn TextureParameters>,
-  ior: Float
+  ior: Real
 }
 
 #[typetag::deserialize(name = "dielectric")]
@@ -23,15 +22,15 @@ impl MaterialParameters for DieletricParameters {
 #[derive(Debug)]
 pub struct Dieletric {
   albedo: Box<dyn Texture>,
-  index_of_refraction: Float
+  index_of_refraction: Real
 }
 
 // TODO: Document this and move it to math module
 fn refract<S: Space<3>>(
-  d: Direction3<S>,
-  normal: Direction3<S>,
-  ior_in_out_ratio: Float
-) -> Option<(Direction3<S>, Float)> {
+  d: UnitVector3<S>,
+  normal: UnitVector3<S>,
+  ior_in_out_ratio: Real
+) -> Option<(UnitVector3<S>, Real)> {
   let dt = d.dot(&normal);
   let discriminant = 1.0 - ior_in_out_ratio * ior_in_out_ratio * (1.0 - dt * dt);
   (discriminant > 0.0).then(|| {
@@ -71,7 +70,8 @@ impl Material for Dieletric {
       let reflect_probability = (rho_parallel * rho_parallel + rho_perp * rho_perp) / 2.0;
 
       // Refract or reflect based on the above probability
-      scattered_dir = if sampler.next() < reflect_probability { reflected } else { refracted }
+      let should_reflect = sampler.next().into_inner() < reflect_probability;
+      scattered_dir = if should_reflect { reflected } else { refracted }
     } else {
       scattered_dir = reflected;
     }
@@ -81,5 +81,5 @@ impl Material for Dieletric {
 
   fn is_emissive(&self) -> bool { false }
 
-  fn pdf(&self, _: &WorldRayIntersection, _: &WorldRay) -> Option<Float> { None }
+  fn pdf(&self, _: &WorldRayIntersection, _: &WorldRay) -> Option<Real> { None }
 }

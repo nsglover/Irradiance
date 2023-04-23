@@ -17,8 +17,8 @@
 	},
   "integrator":
   {
-    "type": "debug-path-tracer",
-    "max_bounces": 64
+    "type": "material-path-tracer",
+    "average-path-length": 1024
   },
 	"materials": [
 		{
@@ -58,6 +58,9 @@
 		{
 			"type": "quad",
 			"transform": [
+        {
+          "scale": 130
+        },
 				{
 					"axis": [1, 0, 0],
 					"angle": 90
@@ -66,13 +69,14 @@
 					"translate": [0, 277, 0]
 				}
 			],
-			"size": [130,130],
 			"material": "light"
 		},
 		{
 			"type": "sphere",
-			"transform": { "translate": [-140,-177.5,-100] },
-			"radius": 100,
+			"transform": [
+        { "scale": 100 },
+        { "translate": [-140,-177.5,-100] }
+      ],
 			"material": "metal"
 		}
 	]

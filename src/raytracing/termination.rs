@@ -1,11 +1,9 @@
-use {
-  super::*,
-  crate::{math::Float, samplers::Sampler}
-};
+use super::*;
+use crate::{math::Real, samplers::Sampler};
 
 pub struct PathContinuation {
   remaining_scatters: usize,
-  survival_probability: Float
+  survival_probability: Real
 }
 
 impl PathContinuation {
@@ -24,7 +22,7 @@ pub struct PathTerminator {
 }
 
 impl PathTerminator {
-  pub fn new(ray: WorldRay, termination_probability: Float) -> Self {
+  pub fn new(ray: WorldRay, termination_probability: Real) -> Self {
     Self {
       ray,
       cont: PathContinuation {
@@ -34,10 +32,10 @@ impl PathTerminator {
     }
   }
 
-  pub fn into_ray(self, sampler: &mut dyn Sampler) -> Option<(WorldRay, Float, PathContinuation)> {
+  pub fn into_ray(self, sampler: &mut dyn Sampler) -> Option<(WorldRay, Real, PathContinuation)> {
     if self.cont.remaining_scatters == 0 {
       None
-    } else if sampler.next() < self.cont.survival_probability {
+    } else if sampler.next().into_inner() < self.cont.survival_probability {
       Some((self.ray, self.cont.survival_probability, self.cont))
     } else {
       None

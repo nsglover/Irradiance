@@ -1,7 +1,6 @@
-use {
-  super::Float,
-  std::{marker::PhantomData, ops}
-};
+use std::{marker::PhantomData, ops};
+
+use super::Real;
 
 #[derive(Clone, Copy)]
 pub struct Phantom<S> {
@@ -44,16 +43,16 @@ impl<S> ops::Div for Phantom<S> {
   fn div(self, _: Self) -> Self::Output { self }
 }
 
-impl<S> ops::Mul<Float> for Phantom<S> {
+impl<S> ops::Mul<Real> for Phantom<S> {
   type Output = Self;
 
-  fn mul(self, _: Float) -> Self::Output { self }
+  fn mul(self, _: Real) -> Self::Output { self }
 }
 
-impl<S> ops::Div<Float> for Phantom<S> {
+impl<S> ops::Div<Real> for Phantom<S> {
   type Output = Self;
 
-  fn div(self, _: Float) -> Self::Output { self }
+  fn div(self, _: Real) -> Self::Output { self }
 }
 
 impl<S> ops::AddAssign for Phantom<S> {
@@ -72,10 +71,10 @@ impl<S> ops::DivAssign for Phantom<S> {
   fn div_assign(&mut self, _: Self) {}
 }
 
-impl<S> ops::MulAssign<Float> for Phantom<S> {
-  fn mul_assign(&mut self, _: Float) {}
+impl<S> ops::MulAssign<Real> for Phantom<S> {
+  fn mul_assign(&mut self, _: Real) {}
 }
 
-impl<S> ops::DivAssign<Float> for Phantom<S> {
-  fn div_assign(&mut self, _: Float) {}
+impl<S> ops::DivAssign<Real> for Phantom<S> {
+  fn div_assign(&mut self, _: Real) {}
 }

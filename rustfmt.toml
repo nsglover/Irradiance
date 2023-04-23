@@ -13,4 +13,5 @@ match_block_trailing_comma = true
 fn_single_line = true
 where_single_line = true
 
-imports_granularity = "One"
+imports_granularity = "Crate"
+group_imports = "StdExternalCrate"

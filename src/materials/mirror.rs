@@ -1,8 +1,7 @@
-use {
-  super::*,
-  crate::{math::Float, raytracing::*, samplers::*, textures::*},
-  serde::Deserialize
-};
+use serde::Deserialize;
+
+use super::*;
+use crate::{math::Real, raytracing::*, samplers::*, textures::*};
 
 #[derive(Debug, Deserialize)]
 struct MirrorParameters {
@@ -32,5 +31,5 @@ impl Material for Mirror {
 
   fn is_emissive(&self) -> bool { false }
 
-  fn pdf(&self, _: &WorldRayIntersection, _: &WorldRay) -> Option<Float> { None }
+  fn pdf(&self, _: &WorldRayIntersection, _: &WorldRay) -> Option<Real> { None }
 }

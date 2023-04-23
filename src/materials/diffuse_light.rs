@@ -1,14 +1,13 @@
-use {
-  super::*,
-  crate::{math::*, raytracing::*, samplers::Sampler, textures::*},
-  serde::Deserialize
-};
+use serde::Deserialize;
+
+use super::*;
+use crate::{math::*, raytracing::*, samplers::Sampler, textures::*};
 
 #[derive(Debug, Deserialize)]
 struct DiffuseLightParameters {
   name: String,
   emit: Box<dyn TextureParameters>,
-  intensity: Float
+  intensity: Real
 }
 
 #[typetag::deserialize(name = "diffuse light")]
@@ -26,7 +25,7 @@ impl MaterialParameters for DiffuseLightParameters {
 #[derive(Debug)]
 pub struct DiffuseLight {
   light_color: Box<dyn Texture>,
-  light_intensity: Float
+  light_intensity: Real
 }
 
 impl Material for DiffuseLight {
@@ -40,5 +39,5 @@ impl Material for DiffuseLight {
 
   fn is_emissive(&self) -> bool { true }
 
-  fn pdf(&self, _: &WorldRayIntersection, _: &WorldRay) -> Option<Float> { None }
+  fn pdf(&self, _: &WorldRayIntersection, _: &WorldRay) -> Option<Real> { None }
 }

@@ -1,11 +1,11 @@
-use {
-  crate::{
-    materials::{Material, MaterialParameters},
-    math::*,
-    raytracing::*,
-    samplers::Sampler
-  },
-  std::{collections::HashMap, fmt::Debug}
+use std::{collections::HashMap, fmt::Debug};
+
+use crate::{
+  common::Wrapper,
+  materials::{Material, MaterialParameters},
+  math::*,
+  raytracing::*,
+  samplers::Sampler
 };
 
 #[typetag::deserialize(tag = "type")]
@@ -25,9 +25,9 @@ pub trait Surface: Debug {
     &self,
     point: &WorldPoint,
     sampler: &mut dyn Sampler
-  ) -> (WorldDirection, Float);
+  ) -> (WorldUnitVector, Real);
 
-  fn intersecting_direction_pdf(&self, point: &WorldPoint, direction: &WorldDirection) -> Float;
+  fn intersecting_direction_pdf(&self, point: &WorldPoint, direction: &WorldUnitVector) -> Real;
 
   fn material(&self) -> &dyn Material;
 }
@@ -46,13 +46,13 @@ pub trait TransformedSurface {
     &self,
     point: &Point3<Self::LocalSpace>,
     sampler: &mut dyn Sampler
-  ) -> (Direction3<Self::LocalSpace>, Float);
+  ) -> (UnitVector3<Self::LocalSpace>, Real);
 
   fn intersecting_direction_pdf(
     &self,
     point: &Point3<Self::LocalSpace>,
-    direction: &Direction3<Self::LocalSpace>
-  ) -> Float;
+    direction: &UnitVector3<Self::LocalSpace>
+  ) -> Real;
 
   fn material(&self) -> &dyn Material;
 }
@@ -61,8 +61,8 @@ pub trait TransformedSurface {
 impl<T: TransformedSurface + Debug> Surface for T {
   fn world_bounding_box(&self) -> WorldBoundingBox {
     let bbox = self.bounding_box();
-    let min = bbox.min().inner();
-    let max = bbox.max().inner();
+    let min = bbox.min().into_inner();
+    let max = bbox.max().into_inner();
     if bbox.is_empty() {
       WorldBoundingBox::new(min.into(), max.into())
     } else {
@@ -78,7 +78,7 @@ impl<T: TransformedSurface + Debug> Surface for T {
 
       let mut transformed_bbox = WorldBoundingBox::default();
       for point in points {
-        transformed_bbox.enclose_point(&(self.local_to_world() * &point));
+        transformed_bbox.enclose_point(&(self.local_to_world().point(&point)));
       }
 
       transformed_bbox
@@ -94,13 +94,13 @@ impl<T: TransformedSurface + Debug> Surface for T {
     &self,
     point: &WorldPoint,
     sampler: &mut dyn Sampler
-  ) -> (WorldDirection, Float) {
+  ) -> (WorldUnitVector, Real) {
     let tr = self.local_to_world();
     let (dir, pdf) = self.interesting_direction_sample(&tr.inverse_point(point), sampler);
     (tr.direction(&dir), pdf)
   }
 
-  fn intersecting_direction_pdf(&self, point: &WorldPoint, direction: &WorldDirection) -> Float {
+  fn intersecting_direction_pdf(&self, point: &WorldPoint, direction: &WorldUnitVector) -> Real {
     let tr = self.local_to_world();
     self.intersecting_direction_pdf(&tr.inverse_point(point), &tr.inverse_direction(direction))
   }

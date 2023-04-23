@@ -1,7 +1,6 @@
-use {
-  crate::{light::*, math::*, raytracing::WorldRayIntersection},
-  std::fmt::Debug
-};
+use std::fmt::Debug;
+
+use crate::{light::*, math::*, raytracing::WorldRayIntersection};
 
 #[typetag::deserialize(tag = "type")]
 pub trait TextureParameters: Debug {

@@ -1,4 +1,5 @@
-use {super::Sampler, crate::math::*};
+use super::Sampler;
+use crate::math::*;
 // use nalgebra::{Const, ToTypenum};
 
 // fn next_samples_map<const N: usize>(
@@ -66,7 +67,7 @@ use {super::Sampler, crate::math::*};
 //   linear_interpolate(s.next(), v0, v1)
 // }
 
-pub fn spherical_to_cartesian<S: Space<3>>(phi: Float, cos_theta: Float) -> Direction3<S> {
+pub fn spherical_to_cartesian<S: Space<3>>(phi: Real, cos_theta: Real) -> UnitVector3<S> {
   let sin_theta = (1.0 - cos_theta * cos_theta).sqrt();
   let x = phi.cos() * sin_theta;
   let y = -phi.sin() * sin_theta;
@@ -81,10 +82,10 @@ pub fn spherical_to_cartesian<S: Space<3>>(phi: Float, cos_theta: Float) -> Dire
 
 pub fn uniform_random_in_unit_disc(s: &mut dyn Sampler) -> Vector2 {
   let theta = s.random_in_closed_open(0.0, 2.0 * PI);
-  (s.next().sqrt() * nalgebra::vector![theta.cos(), theta.sin()]).into()
+  (s.next().into_inner().sqrt() * nalgebra::vector![theta.cos(), theta.sin()]).into()
 }
 
-pub fn uniform_random_on_unit_sphere<S: Space<3>>(s: &mut dyn Sampler) -> Direction3<S> {
+pub fn uniform_random_on_unit_sphere<S: Space<3>>(s: &mut dyn Sampler) -> UnitVector3<S> {
   spherical_to_cartesian(s.random_in_closed_open(0.0, 2.0 * PI), s.random_in_closed(-1.0, 1.0))
 }
 

@@ -1,4 +1,5 @@
 mod sampleable;
 mod wrapper;
 
-pub use {sampleable::*, wrapper::*};
+pub use sampleable::*;
+pub use wrapper::*;

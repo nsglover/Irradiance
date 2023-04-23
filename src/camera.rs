@@ -1,19 +1,19 @@
-use {
-  crate::{
-    math::*,
-    raytracing::*,
-    samplers::{uniform_random_in_unit_disc, Sampler}
-  },
-  serde::Deserialize
+use serde::Deserialize;
+
+use crate::{
+  common::Wrapper,
+  math::*,
+  raytracing::*,
+  samplers::{uniform_random_in_unit_disc, Sampler}
 };
 
 fn default_resolution() -> (u32, u32) { (512, 512) }
 
-fn default_field_of_view() -> Float { 90.0 }
+fn default_field_of_view() -> Real { 90.0 }
 
-fn default_focal_distance() -> Float { 1.0 }
+fn default_focal_distance() -> Real { 1.0 }
 
-fn default_aperture_radius() -> Float { 0.0 }
+fn default_aperture_radius() -> Real { 0.0 }
 
 #[derive(Debug, Deserialize)]
 pub struct CameraParameters {
@@ -23,13 +23,13 @@ pub struct CameraParameters {
   resolution: (u32, u32),
 
   #[serde(alias = "vfov", default = "default_field_of_view")]
-  field_of_view: Float,
+  field_of_view: Real,
 
   #[serde(alias = "fdist", default = "default_focal_distance")]
-  focal_distance: Float,
+  focal_distance: Real,
 
   #[serde(alias = "aperture", default = "default_aperture_radius")]
-  aperture_radius: Float
+  aperture_radius: Real
 }
 
 impl CameraParameters {
@@ -37,13 +37,13 @@ impl CameraParameters {
     let fov = self.field_of_view * PI / 180.0;
     let resolution = self.resolution;
     let height = 2.0 * (fov / 2.0).tan() * self.focal_distance;
-    let width = ((resolution.0 as Float) / (resolution.1 as Float)) * (height as Float);
+    let width = ((resolution.0 as Real) / (resolution.1 as Real)) * (height as Real);
     let image_plane_size = (width, height);
 
     Camera {
       resolution,
       image_plane_size,
-      transform: self.transform.build_transform().into_inverse(),
+      transform: self.transform.build_transform(),
       focal_distance: self.focal_distance,
       aperture_radius: self.aperture_radius
     }
@@ -58,31 +58,31 @@ impl Space<3> for CameraSpace {}
 #[derive(Debug)]
 pub struct Camera {
   resolution: (u32, u32),
-  image_plane_size: (Float, Float),
-  transform: LocalToWorld<CameraSpace>,
-  focal_distance: Float,
-  aperture_radius: Float
+  image_plane_size: (Real, Real),
+  transform: Box<dyn Transform<WorldSpace, CameraSpace>>,
+  focal_distance: Real,
+  aperture_radius: Real
 }
 
 impl Camera {
   pub fn sample_ray_through_pixel(
     &self,
     sampler: &mut dyn Sampler,
-    mut u: Float,
-    mut v: Float
+    mut u: Real,
+    mut v: Real
   ) -> WorldRay {
-    u /= self.resolution.0 as Float;
-    v /= self.resolution.1 as Float;
+    u /= self.resolution.0 as Real;
+    v /= self.resolution.1 as Real;
 
-    let disc = uniform_random_in_unit_disc(sampler) * self.aperture_radius;
-    let origin = Point::from(nalgebra::point![disc.inner().x, disc.inner().y, 0.0]);
+    let disc = (uniform_random_in_unit_disc(sampler) * self.aperture_radius).into_inner();
+    let origin = Point::from(nalgebra::point![disc.x, disc.y, 0.0]);
     let dir = Point::from(nalgebra::point![
       (u - 0.5) * self.image_plane_size.0,
       (0.5 - v) * self.image_plane_size.1,
       -self.focal_distance
     ]) - origin;
 
-    self.transform.ray(&Ray::new(origin, dir.normalize()))
+    self.transform.inverse_ray(&Ray::new(origin, dir.normalize()))
   }
 
   pub fn resolution(&self) -> (u32, u32) { self.resolution }

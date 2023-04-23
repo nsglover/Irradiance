@@ -1,8 +1,7 @@
-use {
-  super::*,
-  crate::{math::*, raytracing::*, samplers::*, textures::*},
-  serde::Deserialize
-};
+use serde::Deserialize;
+
+use super::*;
+use crate::{math::*, raytracing::*, samplers::*, textures::*};
 
 #[derive(Debug, Deserialize)]
 struct LambertianParameters {
@@ -30,7 +29,7 @@ impl Material for Lambertian {
     let normal: WorldVector = hit.shading_normal.into();
     let dir = (normal + random).normalize();
 
-    let pdf = Float::max(0.0, dir.dot(&hit.shading_normal) / PI);
+    let pdf = Real::max(0.0, dir.dot(&hit.shading_normal) / PI);
     let color = self.albedo.value(hit) * pdf;
     let scattered_ray = WorldRay::new(hit.intersect_point, dir);
 
@@ -39,8 +38,8 @@ impl Material for Lambertian {
 
   fn is_emissive(&self) -> bool { false }
 
-  fn pdf(&self, hit: &WorldRayIntersection, sample: &WorldRay) -> Option<Float> {
-    let pdf = Float::max(0.0, sample.dir().dot(&hit.shading_normal) / PI);
+  fn pdf(&self, hit: &WorldRayIntersection, sample: &WorldRay) -> Option<Real> {
+    let pdf = Real::max(0.0, sample.dir().dot(&hit.shading_normal) / PI);
     (pdf > 0.0).then_some(pdf)
   }
 }

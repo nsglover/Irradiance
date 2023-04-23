@@ -1,8 +1,7 @@
-use {
-  clap::Parser,
-  renderer::Renderer,
-  std::{error::Error, fs::File, io::BufReader, time::Duration}
-};
+use std::{error::Error, fs::File, io::BufReader, time::Duration};
+
+use clap::Parser;
+use renderer::Renderer;
 
 mod camera;
 mod common;
@@ -26,9 +25,9 @@ mod textures;
 // TODO: If time permits, MIS with unbiased photon mapping and material path tracing
 
 // Important Features:
+// TODO: Mesh loading and the triangle surface
 // TODO: Direct-lighting MIS and mixture sampling
 // TODO: Stratified sampling
-// TODO: Mesh loading and the triangle surface
 // TODO: Image loading and image texture
 
 // For summer:
@@ -41,7 +40,6 @@ mod textures;
 // TODO: Generalize MIS and mixture integrators to work with any number of arbitrary integrators
 
 // Improvements:
-// TODO: Overhaul vector.rs to be even safer and much easier to use
 // TODO: Overhaul transform.rs to increase performance and reduce code duplication
 // TODO: Materials should have references (not boxes) to textures
 // TODO: Surfaces should have references (not boxes) to materials
@@ -52,7 +50,6 @@ mod textures;
 // TODO: Blend material (from any number of materials, which can be implemented using the original
 //       one that just works for two.)
 // TODO: Environment map
-// TODO: Generalize camera image plane to arbitrary lens surfaces
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = Some(""))]

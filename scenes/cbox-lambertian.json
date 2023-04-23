@@ -57,16 +57,21 @@
 		{
 			"type": "quad",
 			"transform": [
+        {
+          "scale": 555
+        },
 				{
 					"translate": [0, 0, -277.5]
 				}
 			],
-			"size": [555,555],
 			"material": "white"
 		},
 		{
 			"type": "quad",
 			"transform": [
+        {
+          "scale": 555
+        },
 				{
 					"axis": [1, 0, 0],
 					"angle": 90
@@ -81,6 +86,9 @@
 		{
 			"type": "quad",
 			"transform": [
+        {
+          "scale": 555
+        },
 				{
 					"axis": [1, 0, 0],
 					"angle": -90
@@ -89,12 +97,14 @@
 					"translate": [0, -277.5, 0]
 				}
 			],
-			"size": [555,555],
 			"material": "white"
 		},
 		{
 			"type": "quad",
 			"transform": [
+        {
+          "scale": 555
+        },
 				{
 					"axis": [0, 1, 0],
 					"angle": 90
@@ -103,12 +113,14 @@
 					"translate": [-277.5, 0, 0]
 				}
 			],
-			"size": [555,555],
 			"material": "green"
 		},
 		{
 			"type": "quad",
 			"transform": [
+        {
+          "scale": 555
+        },
 				{
 					"axis": [0, 1, 0],
 					"angle": -90
@@ -117,12 +129,14 @@
 					"translate": [277.5, 0, 0]
 				}
 			],
-			"size": [555,555],
 			"material": "red"
 		},
 		{
 			"type": "quad",
 			"transform": [
+        {
+          "scale": 130
+        },
 				{
 					"axis": [1, 0, 0],
 					"angle": 90
@@ -131,18 +145,22 @@
 					"translate": [0, 277, 0]
 				}
 			],
-			"size": [130,130],
 			"material": "light"
 		},
 		{
 			"type": "sphere",
-			"transform": { "translate": [140,-177.5,100] },
-			"radius": 100,
+			"transform": [
+        { "scale": 100 },
+        { "translate": [140,-177.5,100] }
+      ],
 			"material": "greensphere"
 		},
 		{
 			"type": "sphere",
-			"transform": { "translate": [-140,-177.5,-100] },
+			"transform": [
+        { "scale": 100 },
+        { "translate": [-140,-177.5,-100] }
+      ],
 			"radius": 100,
 			"material": "redsphere"
 		}
