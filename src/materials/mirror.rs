@@ -18,7 +18,7 @@ impl MaterialParameters for MirrorParameters {
   fn build_material(&self) -> Arc<dyn Material> {
     Arc::new(Mirror {
       albedo: self.albedo.build_texture(),
-      scatter_random_var: ScatterRandomVariable::Specular(Box::new(ReflectRandomVariable))
+      scatter_random_var: ScatterRandomVariable::Discrete(Box::new(ReflectRandomVariable))
     })
   }
 }
@@ -28,7 +28,7 @@ struct ReflectRandomVariable;
 
 impl DiscreteRandomVariable<WorldRayIntersection, WorldUnitVector> for ReflectRandomVariable {
   fn sample(&self, param: &WorldRayIntersection, _: &mut dyn Sampler) -> Option<WorldUnitVector> {
-    Some((-param.ray.dir()).reflect_about(param.shading_normal))
+    Some((-param.intersect_direction).reflect_about(param.geometric_normal))
   }
 }
 
@@ -39,7 +39,7 @@ pub struct Mirror {
 }
 
 impl Material for Mirror {
-  fn emitted(&self, _: &WorldRayIntersection) -> Color { Color::black() }
+  fn emitted(&self, _: &WorldRayIntersection) -> Option<Color> { None }
 
   fn bsdf(&self, hit: &WorldRayIntersection, _: &WorldUnitVector) -> Color {
     self.albedo.value(hit)

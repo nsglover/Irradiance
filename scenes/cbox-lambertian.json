@@ -7,9 +7,9 @@
 		},
 		"vfov": 40,
 		"fdist": 800,
-    "resolution": [512, 512]
+    "resolution": [1024, 1024]
 	},
-	"samples-per-pixel": 512,
+	"samples-per-pixel": 2048,
 	"background": [0,0,0],
 	"accelerator":
 	{

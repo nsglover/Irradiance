@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use serde::Deserialize;
 
 use super::*;
@@ -8,7 +6,7 @@ use crate::{
   light::*,
   raytracing::*,
   sampling::Sampler,
-  surface_groups::SurfaceGroup,
+  scene::Scene,
   BuildSettings
 };
 
@@ -22,18 +20,18 @@ pub struct PhotonTracerParameters {
 impl IntegratorParameters for PhotonTracerParameters {
   fn build_integrator(
     &self,
-    surfaces: Arc<dyn SurfaceGroup>,
+    scene: Scene,
     settings: BuildSettings
-  ) -> Result<Box<dyn Integrator + Sync + Send>, Box<dyn std::error::Error>> {
+  ) -> Result<Box<dyn Integrator>, Box<dyn std::error::Error>> {
     Ok(Box::new(PhotonTracer {
-      photon_map: PhotonMap::build(surfaces.clone(), self.num_photons, settings),
-      surfaces
+      photon_map: PhotonMap::build(&scene, self.num_photons, settings),
+      scene
     }))
   }
 }
 
 struct PhotonTracer {
-  surfaces: Arc<dyn SurfaceGroup>,
+  scene: Scene,
   photon_map: PhotonMap
 }
 
@@ -41,8 +39,8 @@ impl PhotonTracer {}
 
 impl Integrator for PhotonTracer {
   fn radiance_estimate(&self, _: &mut dyn Sampler, ray: WorldRay) -> Color {
-    if let Some(hit) = self.surfaces.intersect_world_ray(ray) {
-      let n: nalgebra::Unit<_> = hit.shading_normal.into();
+    if let Some((hit, material)) = self.scene.intersect_world_ray(ray) {
+      let n: nalgebra::Unit<_> = hit.geometric_normal.into();
       Color::new(n.x.abs(), n.y.abs(), n.z.abs())
     } else {
       Color::black()

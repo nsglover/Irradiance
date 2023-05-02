@@ -18,7 +18,7 @@ impl MaterialParameters for LambertianParameters {
   fn build_material(&self) -> Arc<dyn Material> {
     Arc::new(Lambertian {
       albedo: self.albedo.build_texture(),
-      scatter_random_var: ScatterRandomVariable::Diffuse(Box::new(CosineWeightedHemisphere))
+      scatter_random_var: ScatterRandomVariable::Continuous(Box::new(CosineWeightedHemisphere))
     })
   }
 }
@@ -32,14 +32,18 @@ impl ContinuousRandomVariable<WorldRayIntersection, WorldUnitVector> for CosineW
     param: &WorldRayIntersection,
     sampler: &mut dyn Sampler
   ) -> Option<(WorldUnitVector, PositiveReal)> {
-    let random: WorldVector = uniform_random_on_unit_sphere(sampler).into();
-    let normal: WorldVector = param.shading_normal.into();
-    let dir = (normal + random).normalize();
-    PositiveReal::new(dir.dot(&param.shading_normal) / PI).map(|pdf| (dir, pdf))
+    if param.geometric_normal.dot(&param.intersect_direction) > 0.0 {
+      None
+    } else {
+      let random: WorldVector = uniform_random_on_unit_sphere(sampler).into();
+      let normal: WorldVector = param.geometric_normal.into();
+      let dir = (normal + random).normalize();
+      PositiveReal::new(dir.dot(&param.geometric_normal) / PI).map(|pdf| (dir, pdf))
+    }
   }
 
   fn pdf(&self, param: &WorldRayIntersection, sample: &WorldUnitVector) -> Option<PositiveReal> {
-    let pdf = Real::max(0.0, sample.dot(&param.shading_normal) / PI);
+    let pdf = sample.dot(&param.geometric_normal) / PI;
     PositiveReal::new(pdf)
   }
 }
@@ -51,10 +55,10 @@ pub struct Lambertian {
 }
 
 impl Material for Lambertian {
-  fn emitted(&self, _: &WorldRayIntersection) -> Color { Color::black() }
+  fn emitted(&self, _: &WorldRayIntersection) -> Option<Color> { None }
 
-  fn bsdf(&self, hit: &WorldRayIntersection, _: &WorldUnitVector) -> Color {
-    self.albedo.value(hit)
+  fn bsdf(&self, hit: &WorldRayIntersection, sample: &WorldUnitVector) -> Color {
+    self.albedo.value(hit) * Real::max(0.0, sample.dot(&hit.geometric_normal) / PI)
   }
 
   fn scatter_random_variable(&self) -> Option<&ScatterRandomVariable> {

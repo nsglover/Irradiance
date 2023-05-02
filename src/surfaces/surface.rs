@@ -1,31 +1,27 @@
 use std::{collections::HashMap, fmt::Debug, sync::Arc};
 
 use super::Mesh;
-use crate::{common::Wrapper, materials::Material, math::*, raytracing::*, sampling::Sampler};
+use crate::{common::Wrapper, materials::Material, math::*, raytracing::*, BuildSettings};
 
 #[typetag::deserialize(tag = "type")]
 pub trait SurfaceParameters: Debug {
-  fn build_surfaces(
+  fn build_surface(
     &self,
     materials: &HashMap<String, Arc<dyn Material>>,
-    meshes: &HashMap<String, Mesh>
-  ) -> Vec<Box<dyn Surface>>;
+    meshes: &HashMap<String, Mesh>,
+    settings: BuildSettings
+  ) -> Box<dyn Surface>;
+
+  fn is_emissive(&self, materials: &HashMap<String, Arc<dyn Material>>) -> bool;
 }
 
 pub trait Surface: Debug {
-  fn world_bounding_box(&self) -> WorldBoundingBox;
-
-  fn intersect_world_ray(&self, ray: WorldRay) -> Option<WorldRayIntersection>;
-
-  fn interesting_direction_sample(
+  fn intersect_world_ray(
     &self,
-    point: &WorldPoint,
-    sampler: &mut dyn Sampler
-  ) -> (WorldUnitVector, Real);
+    ray: &mut WorldRay
+  ) -> Option<(WorldRayIntersection, &dyn Material)>;
 
-  fn intersecting_direction_pdf(&self, point: &WorldPoint, direction: &WorldUnitVector) -> Real;
-
-  fn material(&self) -> &dyn Material;
+  fn world_bounding_box(&self) -> WorldBoundingBox;
 }
 
 pub trait TransformedSurface {
@@ -33,30 +29,27 @@ pub trait TransformedSurface {
 
   fn local_to_world(&self) -> &LocalToWorld<Self::LocalSpace>;
 
-  fn bounding_box(&self) -> BoundingBox3<Self::LocalSpace>;
-
-  fn intersect_ray(&self, ray: Ray3<Self::LocalSpace>)
-    -> Option<RayIntersection<Self::LocalSpace>>;
-
-  fn interesting_direction_sample(
+  fn intersect_ray(
     &self,
-    point: &Point3<Self::LocalSpace>,
-    sampler: &mut dyn Sampler
-  ) -> (UnitVector3<Self::LocalSpace>, Real);
+    ray: &mut Ray3<Self::LocalSpace>
+  ) -> Option<(RayIntersection<Self::LocalSpace>, &dyn Material)>;
 
-  fn intersecting_direction_pdf(
-    &self,
-    point: &Point3<Self::LocalSpace>,
-    direction: &UnitVector3<Self::LocalSpace>
-  ) -> Real;
-
-  fn material(&self) -> &dyn Material;
+  fn local_bounding_box(&self) -> BoundingBox3<Self::LocalSpace>;
 }
 
 // TODO: Move this to transform class
 impl<T: TransformedSurface + Debug> Surface for T {
+  fn intersect_world_ray(
+    &self,
+    ray: &mut WorldRay
+  ) -> Option<(WorldRayIntersection, &dyn Material)> {
+    let tr = self.local_to_world();
+    let mut local_ray = tr.inverse_ray(&ray);
+    self.intersect_ray(&mut local_ray).map(|(local_hit, mat)| (tr.ray_intersect(&local_hit), mat))
+  }
+
   fn world_bounding_box(&self) -> WorldBoundingBox {
-    let bbox = self.bounding_box();
+    let bbox = self.local_bounding_box();
     let min = bbox.min().into_inner();
     let max = bbox.max().into_inner();
     if bbox.is_empty() {
@@ -81,25 +74,18 @@ impl<T: TransformedSurface + Debug> Surface for T {
     }
   }
 
-  fn intersect_world_ray(&self, ray: WorldRay) -> Option<WorldRayIntersection> {
-    let tr = self.local_to_world();
-    self.intersect_ray(tr.inverse_ray(&ray)).map(|local_hit| tr.ray_intersect(&local_hit))
-  }
+  // fn intersecting_direction_sample(
+  //   &self,
+  //   point: &WorldPoint,
+  //   sampler: &mut dyn Sampler
+  // ) -> (WorldUnitVector, Real) {
+  //   let tr = self.local_to_world();
+  //   let (dir, pdf) = self.intersecting_direction_sample(&tr.inverse_point(point), sampler);
+  //   (tr.direction(&dir), pdf)
+  // }
 
-  fn interesting_direction_sample(
-    &self,
-    point: &WorldPoint,
-    sampler: &mut dyn Sampler
-  ) -> (WorldUnitVector, Real) {
-    let tr = self.local_to_world();
-    let (dir, pdf) = self.interesting_direction_sample(&tr.inverse_point(point), sampler);
-    (tr.direction(&dir), pdf)
-  }
-
-  fn intersecting_direction_pdf(&self, point: &WorldPoint, direction: &WorldUnitVector) -> Real {
-    let tr = self.local_to_world();
-    self.intersecting_direction_pdf(&tr.inverse_point(point), &tr.inverse_direction(direction))
-  }
-
-  fn material(&self) -> &dyn Material { self.material() }
+  // fn intersecting_direction_pdf(&self, point: &WorldPoint, direction: &WorldUnitVector) -> Real {
+  //   let tr = self.local_to_world();
+  //   self.intersecting_direction_pdf(&tr.inverse_point(point), &tr.inverse_direction(direction))
+  // }
 }

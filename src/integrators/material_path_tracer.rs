@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use serde::Deserialize;
 
 use super::*;
@@ -9,7 +7,7 @@ use crate::{
   math::{PositiveReal, Real},
   raytracing::*,
   sampling::*,
-  surface_groups::*,
+  scene::Scene,
   BuildSettings
 };
 
@@ -24,11 +22,11 @@ struct Parameters {
 impl IntegratorParameters for Parameters {
   fn build_integrator(
     &self,
-    surfaces: Arc<dyn SurfaceGroup>,
+    scene: Scene,
     _: BuildSettings
-  ) -> Result<Box<dyn Integrator + Sync + Send>, Box<dyn std::error::Error>> {
+  ) -> Result<Box<dyn Integrator>, Box<dyn std::error::Error>> {
     Ok(Box::new(MaterialPathTracer {
-      surfaces,
+      scene,
       path_termination_probability: 1.0 / (self.average_path_length as Real),
       background: Color::black()
     }))
@@ -36,7 +34,7 @@ impl IntegratorParameters for Parameters {
 }
 
 pub struct MaterialPathTracer {
-  pub(super) surfaces: Arc<dyn SurfaceGroup>,
+  pub(super) scene: Scene,
   pub(super) path_termination_probability: Real,
   pub(super) background: Color
 }
@@ -51,25 +49,25 @@ impl PathTraceIntegrator for MaterialPathTracer {
     sampler: &mut dyn Sampler,
     ray: WorldRay
   ) -> Result<(Color, Color, WorldRay, Option<PositiveReal>), Color> {
-    if let Some(hit) = self.surfaces.intersect_world_ray(ray) {
-      let radiance_emitted = hit.material.emitted(&hit);
-      if let Some(scatter_rv) = hit.material.scatter_random_variable() {
+    if let Some((hit, material)) = self.scene.intersect_world_ray(ray) {
+      let radiance_emitted = material.emitted(&hit).unwrap_or(Color::black());
+      if let Some(scatter_rv) = material.scatter_random_variable() {
         match scatter_rv {
-          ScatterRandomVariable::Diffuse(rv) => {
+          ScatterRandomVariable::Continuous(rv) => {
             if let Some((sample, pdf)) = rv.sample_with_pdf(&hit, sampler) {
               return Ok((
                 radiance_emitted,
-                hit.material.bsdf(&hit, &sample),
+                material.bsdf(&hit, &sample),
                 Ray::new(hit.intersect_point, sample),
                 Some(pdf)
               ));
             }
           },
-          ScatterRandomVariable::Specular(rv) => {
+          ScatterRandomVariable::Discrete(rv) => {
             if let Some(sample) = rv.sample(&hit, sampler) {
               return Ok((
                 radiance_emitted,
-                hit.material.bsdf(&hit, &sample),
+                material.bsdf(&hit, &sample),
                 Ray::new(hit.intersect_point, sample),
                 None
               ));

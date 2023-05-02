@@ -1,10 +1,10 @@
-use std::{sync::Arc, time::Duration};
+use std::time::Duration;
 
 use indicatif::{ProgressBar, ProgressDrawTarget, ProgressStyle};
 use kd_tree::KdTree3;
 
 use super::*;
-use crate::{duration_to_hms, surface_groups::SurfaceGroup, BuildSettings};
+use crate::{duration_to_hms, scene::Scene, BuildSettings};
 
 pub struct PhotonMap {
   kd_tree: KdTree3<Photon>
@@ -12,7 +12,7 @@ pub struct PhotonMap {
 
 impl PhotonMap {
   fn trace_photons(
-    surfaces: Arc<dyn SurfaceGroup>,
+    scene: &Scene,
     num_photons: usize,
     maybe_progress_bar: Option<ProgressBar>
   ) -> Vec<Photon> {
@@ -21,11 +21,7 @@ impl PhotonMap {
     photons
   }
 
-  pub fn build(
-    surfaces: Arc<dyn SurfaceGroup>,
-    num_photons: usize,
-    settings: BuildSettings
-  ) -> Self {
+  pub fn build(scene: &Scene, num_photons: usize, settings: BuildSettings) -> Self {
     println!("Tracing {} photons...", num_photons);
 
     // If enabled, start up the progress bar
@@ -44,7 +40,7 @@ impl PhotonMap {
       progress_bar
     });
 
-    let photons = Self::trace_photons(surfaces, num_photons, maybe_progress_bar.clone());
+    let photons = Self::trace_photons(scene, num_photons, maybe_progress_bar.clone());
     if let Some(progress_bar) = maybe_progress_bar {
       progress_bar.finish();
     }

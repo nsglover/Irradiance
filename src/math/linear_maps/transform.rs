@@ -29,23 +29,14 @@ pub trait Transform<In: Space<3>, Out: Space<3>>: Debug + Display + Sync + Send 
   }
 
   fn ray_intersect<'a>(&self, ray_intersection: &RayIntersection<In>) -> RayIntersection<Out> {
-    let ray = &ray_intersection.ray;
-    let dir: Vector3<In> = ray.dir().inner.into_inner().into();
+    let dir: Vector3<In> = ray_intersection.intersect_direction.inner.into_inner().into();
     let (transformed_dir, time_dilation) = self.vector(&dir).normalize_with_norm();
 
-    let transformed_ray = Ray3::new_with_time(
-      ray.max_intersect_time() * PositiveReal::new_unchecked(time_dilation),
-      self.point(&ray.origin()),
-      transformed_dir
-    );
-
     RayIntersection {
-      ray: transformed_ray,
-      material: ray_intersection.material.clone(),
+      intersect_direction: transformed_dir,
       intersect_time: ray_intersection.intersect_time * PositiveReal::new_unchecked(time_dilation),
       intersect_point: self.point(&ray_intersection.intersect_point),
       geometric_normal: self.normal(&ray_intersection.geometric_normal),
-      shading_normal: self.normal(&ray_intersection.shading_normal),
       tex_coords: ray_intersection.tex_coords
     }
   }
@@ -73,23 +64,14 @@ pub trait Transform<In: Space<3>, Out: Space<3>>: Debug + Display + Sync + Send 
     &self,
     ray_intersection: &RayIntersection<Out>
   ) -> RayIntersection<In> {
-    let ray = &ray_intersection.ray;
-    let dir: Vector3<Out> = ray.dir().inner.into_inner().into();
+    let dir: Vector3<Out> = ray_intersection.intersect_direction.inner.into_inner().into();
     let (transformed_dir, time_dilation) = self.inverse_vector(&dir).normalize_with_norm();
 
-    let transformed_ray = Ray3::new_with_time(
-      ray.max_intersect_time() * PositiveReal::new_unchecked(time_dilation),
-      self.inverse_point(&ray.origin()),
-      transformed_dir
-    );
-
     RayIntersection {
-      ray: transformed_ray,
-      material: ray_intersection.material.clone(),
+      intersect_direction: transformed_dir,
       intersect_time: ray_intersection.intersect_time * PositiveReal::new_unchecked(time_dilation),
       intersect_point: self.inverse_point(&ray_intersection.intersect_point),
       geometric_normal: self.inverse_normal(&ray_intersection.geometric_normal),
-      shading_normal: self.inverse_normal(&ray_intersection.shading_normal),
       tex_coords: ray_intersection.tex_coords
     }
   }

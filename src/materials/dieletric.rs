@@ -19,7 +19,7 @@ impl MaterialParameters for DieletricParameters {
   fn build_material(&self) -> Arc<dyn Material> {
     Arc::new(Dieletric {
       albedo: self.albedo.build_texture(),
-      scatter_random_var: ScatterRandomVariable::Specular(Box::new(RefractRandomVariable {
+      scatter_random_var: ScatterRandomVariable::Discrete(Box::new(RefractRandomVariable {
         index_of_refraction: self.ior
       }))
     })
@@ -37,19 +37,19 @@ impl DiscreteRandomVariable<WorldRayIntersection, WorldUnitVector> for RefractRa
     hit: &WorldRayIntersection,
     sampler: &mut dyn Sampler
   ) -> Option<WorldUnitVector> {
-    let dir = hit.ray.dir();
+    let dir = hit.intersect_direction;
 
     // Ensure normal and IOR are correctly oriented (i.e. for whether ray is entering or exiting)
-    let mut normal = hit.shading_normal;
+    let mut normal = hit.geometric_normal;
     let mut eta_in = 1.0;
     let mut eta_out = self.index_of_refraction;
-    if dir.dot(&hit.shading_normal) > 0.0 {
+    if dir.dot(&hit.geometric_normal) > 0.0 {
       normal = -normal;
       std::mem::swap(&mut eta_in, &mut eta_out);
     }
 
     let cos_theta_in = -dir.dot(&normal);
-    let reflected = -dir.reflect_about(hit.shading_normal);
+    let reflected = -dir.reflect_about(hit.geometric_normal);
     let scattered_dir;
     if let Some((refracted, cos_theta_out)) = refract(dir, normal, eta_in / eta_out) {
       // Compute Fresnel coefficient (probability of reflection)
@@ -97,7 +97,7 @@ fn refract<S: Space<3>>(
 }
 
 impl Material for Dieletric {
-  fn emitted(&self, _: &WorldRayIntersection) -> Color { Color::black() }
+  fn emitted(&self, _: &WorldRayIntersection) -> Option<Color> { None }
 
   fn bsdf(&self, hit: &WorldRayIntersection, _: &WorldUnitVector) -> Color {
     self.albedo.value(hit)

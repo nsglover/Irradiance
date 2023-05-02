@@ -1,11 +1,13 @@
-use std::{fmt::Display, sync::Arc, time::Duration};
+use std::{sync::Arc, time::Duration};
 
 use indicatif::{ProgressBar, ProgressDrawTarget, ProgressStyle};
 use rand::{distributions::Uniform, Rng};
 use serde_derive::Deserialize;
 
 use super::{surface_list::*, *};
-use crate::{duration_to_hms, math::*, raytracing::*, surfaces::Surface, BuildSettings};
+use crate::{
+  duration_to_hms, materials::Material, math::*, raytracing::*, surfaces::Surface, BuildSettings
+};
 
 #[derive(Debug, Clone, Copy, Deserialize)]
 pub enum PartitionStrategy {
@@ -16,23 +18,36 @@ pub enum PartitionStrategy {
   Random
 }
 
-#[derive(Debug, Clone, Copy, Deserialize)]
+#[derive(Debug, Deserialize)]
 pub struct BvhParameters {
   #[serde(alias = "strategy")]
   pub partition_strategy: PartitionStrategy,
 
   #[serde(alias = "max-leaf-prims")]
-  pub max_leaf_primitives: usize
+  pub max_leaf_primitives: usize,
+
+  #[serde(alias = "sub-surfaces")]
+  pub surfaces: Vec<Box<dyn SurfaceParameters>>
 }
 
 #[typetag::deserialize(name = "bvh")]
-impl SurfaceGroupParameters for BvhParameters {
-  fn build_surface_group(
+impl SurfaceParameters for BvhParameters {
+  fn build_surface(
     &self,
-    surfaces: Vec<Box<dyn Surface>>,
+    materials: &std::collections::HashMap<String, Arc<dyn Material>>,
+    meshes: &std::collections::HashMap<String, Mesh>,
     settings: BuildSettings
-  ) -> Result<Arc<dyn SurfaceGroup>, Box<dyn std::error::Error>> {
-    Ok(Arc::new(BoundingVolumeHierarchy::build(surfaces, self, settings)))
+  ) -> Box<dyn Surface> {
+    Box::new(BoundingVolumeHierarchy::build(
+      self.surfaces.iter().map(|s| s.build_surface(materials, meshes, settings)).collect(),
+      self.partition_strategy,
+      self.max_leaf_primitives,
+      settings
+    ))
+  }
+
+  fn is_emissive(&self, materials: &HashMap<String, Arc<dyn Material>>) -> bool {
+    self.surfaces.iter().any(|s| s.is_emissive(materials))
   }
 }
 
@@ -49,30 +64,30 @@ struct BvhNode {
 }
 
 impl BvhNode {
-  fn intersect(&self, mut ray: WorldRay) -> Option<WorldRayIntersection> {
+  fn intersect(&self, ray: &mut WorldRay) -> Option<(WorldRayIntersection, &dyn Material)> {
     if self.bounding_box.ray_intersects_fast(&ray) {
       match &self.node_type {
         BvhNodeType::Leaf(surface_list) => surface_list.intersect_world_ray(ray),
         BvhNodeType::Node(maybe_left, maybe_right) => {
           match (
-            maybe_left.as_ref().and_then(|left| left.intersect(ray.clone())),
-            maybe_right.as_ref().and_then(|right| right.intersect(ray.clone()))
+            maybe_left.as_ref().and_then(|left| left.intersect(ray)),
+            maybe_right.as_ref().and_then(|right| right.intersect(ray))
           ) {
             (None, maybe_hit) | (maybe_hit, None) => {
-              if let Some(hit) = maybe_hit.as_ref() {
+              if let Some((hit, _)) = maybe_hit.as_ref() {
                 ray.set_max_intersect_time(hit.intersect_time);
               }
 
               maybe_hit
             },
             (Some(left_hit), Some(right_hit)) => {
-              let hit = if left_hit.intersect_time < right_hit.intersect_time {
+              let hit = if left_hit.0.intersect_time < right_hit.0.intersect_time {
                 left_hit
               } else {
                 right_hit
               };
 
-              ray.set_max_intersect_time(hit.intersect_time);
+              ray.set_max_intersect_time(hit.0.intersect_time);
               Some(hit)
             }
           }
@@ -82,45 +97,18 @@ impl BvhNode {
       None
     }
   }
-
-  fn fmt_recursive(&self, f: &mut std::fmt::Formatter, prefix: String) -> std::fmt::Result {
-    writeln!(f, "{}Box: {}, {}", prefix, self.bounding_box.min(), self.bounding_box.max())?;
-    match &self.node_type {
-      BvhNodeType::Leaf(s) => writeln!(f, "{}Leaf({})", prefix, s.num_surfaces()),
-      BvhNodeType::Node(maybe_left, maybe_right) => {
-        writeln!(f, "{}Node:", prefix)?;
-        writeln!(f, "{}LEFT:", prefix)?;
-        if let Some(left) = maybe_left {
-          left.fmt_recursive(f, prefix.clone() + " - ")?;
-        }
-
-        writeln!(f, "\n{}RIGHT:", prefix)?;
-        if let Some(right) = maybe_right {
-          right.fmt_recursive(f, prefix + " - ")?;
-        }
-
-        Ok(())
-      }
-    }
-  }
-}
-
-impl Display for BvhNode {
-  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-    self.fmt_recursive(f, String::default())
-  }
 }
 
 #[derive(Debug)]
 pub struct BoundingVolumeHierarchy {
-  num_surfaces: usize,
   root_node: BvhNode
 }
 
 impl BoundingVolumeHierarchy {
   fn build_node(
     mut surfaces: Vec<Box<dyn Surface>>,
-    params: &BvhParameters,
+    partition_strategy: PartitionStrategy,
+    max_leaf_primitives: usize,
     maybe_progress_bar: Option<ProgressBar>
   ) -> Option<BvhNode> {
     let num_surfaces = surfaces.len();
@@ -132,7 +120,7 @@ impl BoundingVolumeHierarchy {
 
     let mut left_surfaces: Vec<Box<dyn Surface>>;
     let mut right_surfaces: Vec<Box<dyn Surface>>;
-    if num_surfaces <= params.max_leaf_primitives {
+    if num_surfaces <= max_leaf_primitives {
       if num_surfaces == 0 {
         None
       } else {
@@ -151,7 +139,7 @@ impl BoundingVolumeHierarchy {
     } else {
       let left: Option<BvhNode>;
       let right: Option<BvhNode>;
-      match params.partition_strategy {
+      match partition_strategy {
         PartitionStrategy::SurfaceAreaHeuristic => {
           const NUM_BUCKETS: usize = 12;
           let num_buckets = NUM_BUCKETS.min(num_surfaces);
@@ -239,8 +227,19 @@ impl BoundingVolumeHierarchy {
         }
       };
 
-      left = Self::build_node(left_surfaces, params, maybe_progress_bar.clone());
-      right = Self::build_node(right_surfaces, params, maybe_progress_bar);
+      left = Self::build_node(
+        left_surfaces,
+        partition_strategy,
+        max_leaf_primitives,
+        maybe_progress_bar.clone()
+      );
+
+      right = Self::build_node(
+        right_surfaces,
+        partition_strategy,
+        max_leaf_primitives,
+        maybe_progress_bar
+      );
 
       Some(BvhNode {
         bounding_box,
@@ -249,9 +248,10 @@ impl BoundingVolumeHierarchy {
     }
   }
 
-  fn build(
+  pub fn build(
     surfaces: Vec<Box<dyn Surface>>,
-    params: &BvhParameters,
+    partition_strategy: PartitionStrategy,
+    max_leaf_primitives: usize,
     settings: BuildSettings
   ) -> Self {
     println!("Building BVH on {} surfaces...", surfaces.len());
@@ -273,8 +273,13 @@ impl BoundingVolumeHierarchy {
     });
 
     let s = Self {
-      num_surfaces: surfaces.len(),
-      root_node: Self::build_node(surfaces, params, maybe_progress_bar.clone()).unwrap()
+      root_node: Self::build_node(
+        surfaces,
+        partition_strategy,
+        max_leaf_primitives,
+        maybe_progress_bar.clone()
+      )
+      .unwrap()
     };
 
     if let Some(progress_bar) = maybe_progress_bar {
@@ -285,20 +290,13 @@ impl BoundingVolumeHierarchy {
   }
 }
 
-impl SurfaceGroup for BoundingVolumeHierarchy {
-  fn num_surfaces(&self) -> usize { self.num_surfaces }
-
-  fn intersect_world_ray(&self, ray: WorldRay) -> Option<WorldRayIntersection> {
+impl Surface for BoundingVolumeHierarchy {
+  fn intersect_world_ray(
+    &self,
+    ray: &mut WorldRay
+  ) -> Option<(WorldRayIntersection, &dyn Material)> {
     self.root_node.intersect(ray)
   }
 
-  fn pdf(&self, _point: &WorldPoint, _direction: &WorldUnitVector) -> Real { todo!() }
-
-  fn sample_and_pdf(
-    &self,
-    _point: &WorldPoint,
-    _sampler: &mut dyn crate::sampling::Sampler
-  ) -> (WorldUnitVector, Real) {
-    todo!()
-  }
+  fn world_bounding_box(&self) -> WorldBoundingBox { self.root_node.bounding_box.clone() }
 }

@@ -11,12 +11,6 @@
 	},
 	"samples-per-pixel": 1024,
 	"background": [0,0,0],
-	"accelerator":
-	{
-    "type": "bvh",
-    "strategy": "sah",
-    "max-leaf-prims": 5
-	},
   "integrator":
   {
     "type": "material-path-tracer",

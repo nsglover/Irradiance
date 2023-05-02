@@ -1,11 +1,6 @@
 use std::{fmt::Debug, sync::Arc};
 
-use crate::{
-  light::*,
-  math::*,
-  raytracing::*,
-  sampling::{ContinuousRandomVariable, DiscreteRandomVariable}
-};
+use crate::{light::*, math::*, raytracing::*, sampling::RandomVariable};
 
 #[typetag::deserialize(tag = "type")]
 pub trait MaterialParameters: Debug {
@@ -14,14 +9,10 @@ pub trait MaterialParameters: Debug {
   fn build_material(&self) -> Arc<dyn Material>;
 }
 
-#[derive(Debug)]
-pub enum ScatterRandomVariable {
-  Diffuse(Box<dyn ContinuousRandomVariable<WorldRayIntersection, WorldUnitVector>>),
-  Specular(Box<dyn DiscreteRandomVariable<WorldRayIntersection, WorldUnitVector>>)
-}
+pub type ScatterRandomVariable = RandomVariable<WorldRayIntersection, WorldUnitVector>;
 
 pub trait Material: Debug {
-  fn emitted(&self, hit: &WorldRayIntersection) -> Color;
+  fn emitted(&self, hit: &WorldRayIntersection) -> Option<Color>;
 
   fn bsdf(&self, hit: &WorldRayIntersection, scattered_dir: &WorldUnitVector) -> Color;
 

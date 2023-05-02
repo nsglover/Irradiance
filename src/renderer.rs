@@ -8,7 +8,6 @@ use std::{
 use image::{DynamicImage, ImageBuffer, Rgb};
 use indicatif::{ProgressBar, ProgressDrawTarget, ProgressStyle};
 use serde::Deserialize;
-use serde_json::Value;
 use threadpool::{Builder, ThreadPool};
 
 use crate::{
@@ -19,8 +18,8 @@ use crate::{
   materials::MaterialParameters,
   math::*,
   sampling::*,
-  surface_groups::SurfaceGroupParameters,
-  surfaces::{MeshParameters, SurfaceParameters},
+  scene::Scene,
+  surfaces::{self, MeshParameters, SurfaceParameters},
   BuildSettings, RenderSettings
 };
 
@@ -41,21 +40,14 @@ struct SceneParameters {
   #[serde(alias = "surfaces", default)]
   pub surface_params: Vec<Box<dyn SurfaceParameters>>,
 
-  #[serde(alias = "accelerator", default = "crate::surface_groups::default_surface_group")]
-  pub surface_group_params: Box<dyn SurfaceGroupParameters>,
-
   #[serde(alias = "integrator", default = "crate::integrators::default_integrator")]
   pub integrator_params: Box<dyn IntegratorParameters>
-}
-
-fn parse_scene_params(json: Value) -> Result<SceneParameters, Box<dyn Error>> {
-  Ok(serde_json::from_value(json)?)
 }
 
 pub struct Renderer {
   samples_per_pixel: usize,
   camera: Camera,
-  integrator: Box<dyn Integrator + Sync + Send>
+  integrator: Box<dyn Integrator>
 }
 
 type Image = ImageBuffer<Rgb<u8>, Vec<u8>>;
@@ -65,25 +57,37 @@ impl Renderer {
     json: serde_json::Value,
     settings: BuildSettings
   ) -> Result<Renderer, Box<dyn Error>> {
-    // TODO: Add a progress bar for this building step
+    // Parse the scene from JSON
     let SceneParameters {
       samples_per_pixel,
       camera_params,
       material_params,
       mesh_params,
       surface_params,
-      surface_group_params,
       integrator_params
-    } = parse_scene_params(json)?;
+    } = serde_json::from_value(json)?;
 
+    // Build materials
     let materials = material_params.into_iter().map(|p| (p.name(), p.build_material())).collect();
-    let meshes = mesh_params.into_iter().map(|p| p.build_mesh()).collect();
-    let surface_group = surface_group_params.build_surface_group(
-      surface_params.into_iter().flat_map(|p| p.build_surfaces(&materials, &meshes)).collect(),
-      settings
-    )?;
 
-    let integrator = integrator_params.build_integrator(surface_group, settings)?;
+    // Load meshes from files
+    let meshes = mesh_params.into_iter().map(|p| p.build_mesh()).collect();
+
+    // Partition surfaces based on whether they are emissive
+    let (emissive_surface_params, non_emissive_surface_params) =
+      surface_params.into_iter().partition(|s| s.is_emissive(&materials));
+    let non_emissive_surface =
+      surfaces::default_grouping(non_emissive_surface_params, &materials, &meshes, settings);
+    let emissive_surface =
+      surfaces::default_grouping(emissive_surface_params, &materials, &meshes, settings);
+
+    // Build the scene from the surface partition
+    let scene = Scene::new(non_emissive_surface, emissive_surface);
+
+    // Build integrator from scene
+    let integrator = integrator_params.build_integrator(scene, settings)?;
+
+    // Return the scene with its camera
     Ok(Self { samples_per_pixel, camera: camera_params.build_camera(), integrator })
   }
 
@@ -193,7 +197,7 @@ impl Renderer {
 
   fn async_integrate_subimage(
     thread_pool: &ThreadPool,
-    integrator: &Arc<Box<dyn Integrator + Sync + Send>>,
+    integrator: &Arc<Box<dyn Integrator>>,
     camera: &Arc<Camera>,
     samples_per_pixel: usize,
     image_lock: &Arc<Mutex<Image>>,

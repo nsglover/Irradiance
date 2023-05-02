@@ -12,11 +12,9 @@ mod math;
 mod raytracing;
 mod renderer;
 mod sampling;
-mod surface_groups;
+mod scene;
 mod surfaces;
 mod textures;
-
-// For the semester:
 
 // Project Features:
 // TODO: Photon mapping
@@ -25,28 +23,22 @@ mod textures;
 // TODO: README.md
 
 // Important Features:
-// TODO: Direct-lighting MIS and mixture sampling
+// TODO: Image loading and image texture implementation
+// TODO: Use mesh surface normals when available
 // TODO: Stratified sampling
-// TODO: Image loading and image texture
-
-// For summer:
-
-// Important Features:
-// TODO: Overhaul the whole material sampling interface and also the PDF interface for surface
-//       (perhaps use some sort of PositiveReal type?). Make a generalized random variable trait and
-//       a BRDF class; materials are nothing more than a BRDF and a random variable, which aim to
-//       to importance sample everything but the L_i term in the rendering equation.
+// TODO: Direct-lighting MIS and mixture sampling
 // TODO: Generalize MIS and mixture integrators to work with any number of arbitrary integrators
 
 // Important Optimizations:
-// TODO: Allow BVHs to be specialized to individual surfaces
 // TODO: Investigate the performance disparity and fix it
 
 // Minor Code Improvements:
-// TODO: Stop cloning rays (maybe make intersect return Result<RayIntersection, Ray>?)
+// TODO: Allow user to customize whether we use BVH or surface list for the emissive partition
+// TODO: SurfaceParameters should just return one surface
 // TODO: All parameter structs should be consumed upon building their target
+// TODO: Negate RayIntersection::intersect_direction to match BSDF convention
 
-// Side Features:
+// Minor Features:
 // TODO: Perlin noise
 // TODO: Blend material (from any number of materials, which can be implemented using the original
 //       one that just works for two.)

@@ -2,26 +2,27 @@ use std::{collections::HashMap, sync::Arc};
 
 use serde::Deserialize;
 
-use super::*;
+use super::{bvh::*, *};
 use crate::{
-  materials::Material, math::*, raytracing::*, sampling::Sampler, textures::TextureCoordinate
+  materials::Material, math::*, raytracing::*, textures::TextureCoordinate, BuildSettings
 };
 
 #[derive(Debug, Deserialize)]
-pub struct TriangleSurfaceParameters {
+pub struct TriangleMeshSurfaceParameters {
   transform: TransformParameters,
   mesh: String,
   material: String
 }
 
 #[typetag::deserialize(name = "mesh")]
-impl SurfaceParameters for TriangleSurfaceParameters {
-  fn build_surfaces(
+impl SurfaceParameters for TriangleMeshSurfaceParameters {
+  fn build_surface(
     &self,
     materials: &HashMap<String, Arc<dyn Material>>,
-    meshes: &HashMap<String, Mesh>
-  ) -> Vec<Box<dyn Surface>> {
-    meshes
+    meshes: &HashMap<String, Mesh>,
+    settings: BuildSettings
+  ) -> Box<dyn Surface> {
+    let triangles = meshes
       .get(&self.mesh)
       .unwrap()
       .to_triangles(
@@ -30,7 +31,18 @@ impl SurfaceParameters for TriangleSurfaceParameters {
       )
       .into_iter()
       .map(|t| Box::new(t) as Box<dyn Surface>)
-      .collect()
+      .collect();
+
+    Box::new(BoundingVolumeHierarchy::build(
+      triangles,
+      PartitionStrategy::SurfaceAreaHeuristic,
+      2,
+      settings
+    ))
+  }
+
+  fn is_emissive(&self, materials: &HashMap<String, Arc<dyn Material>>) -> bool {
+    materials.get(&self.material).unwrap().is_emissive()
   }
 }
 
@@ -77,9 +89,10 @@ impl TriangleSurface {
 }
 
 impl Surface for TriangleSurface {
-  fn world_bounding_box(&self) -> WorldBoundingBox { self.bounding_box.clone() }
-
-  fn intersect_world_ray(&self, ray: WorldRay) -> Option<WorldRayIntersection> {
+  fn intersect_world_ray(
+    &self,
+    ray: &mut WorldRay
+  ) -> Option<(WorldRayIntersection, &dyn Material)> {
     let (p0, _, t0) = self.v0;
     let (p1, _, t1) = self.v1;
     let (p2, _, t2) = self.v2;
@@ -108,39 +121,20 @@ impl Surface for TriangleSurface {
     let bary = [1.0 - (u + v), u, v];
 
     if let Some((t, _)) = ray.at_real(t) {
-      let mut geometric_normal = self.true_normal;
-      // TODO: Shading normals look strange; seems to be a mesh loading issue?
-      // let mut sn = (n0 * bary[0] + n1 * bary[1] + n2 * bary[2]).normalize();
-      if ray.dir().dot(&geometric_normal) > 0.0 {
-        // sn = -sn;
-        geometric_normal = -geometric_normal;
-      }
-
-      Some(WorldRayIntersection {
-        ray,
-        material: self.material.clone(),
-        intersect_time: t,
-        intersect_point: p0 * bary[0] + (p1 * bary[1]).into() + (p2 * bary[2]).into(),
-        geometric_normal,
-        shading_normal: geometric_normal,
-        tex_coords: t0 * bary[0] + t1 * bary[1] + t2 * bary[2]
-      })
+      Some((
+        WorldRayIntersection {
+          intersect_direction: ray.dir(),
+          intersect_time: t,
+          intersect_point: p0 * bary[0] + (p1 * bary[1]).into() + (p2 * bary[2]).into(),
+          geometric_normal: self.true_normal,
+          tex_coords: t0 * bary[0] + t1 * bary[1] + t2 * bary[2]
+        },
+        self.material.as_ref()
+      ))
     } else {
       None
     }
   }
 
-  fn interesting_direction_sample(
-    &self,
-    _point: &WorldPoint,
-    _sampler: &mut dyn Sampler
-  ) -> (WorldUnitVector, Real) {
-    todo!()
-  }
-
-  fn intersecting_direction_pdf(&self, _point: &WorldPoint, _direction: &WorldUnitVector) -> Real {
-    todo!()
-  }
-
-  fn material(&self) -> &dyn Material { self.material.as_ref() }
+  fn world_bounding_box(&self) -> WorldBoundingBox { self.bounding_box.clone() }
 }

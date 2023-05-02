@@ -37,11 +37,11 @@ impl Material for DiffuseLight {
 
   fn is_emissive(&self) -> bool { true }
 
-  fn emitted(&self, hit: &WorldRayIntersection) -> Color {
-    if hit.ray.dir().dot(&hit.shading_normal) > 0.0 {
-      Color::black()
+  fn emitted(&self, hit: &WorldRayIntersection) -> Option<Color> {
+    if hit.intersect_direction.dot(&hit.geometric_normal) > 0.0 {
+      None
     } else {
-      self.light_color.value(hit) * self.light_intensity
+      Some(self.light_color.value(hit) * self.light_intensity)
     }
   }
 }

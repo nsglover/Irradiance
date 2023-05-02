@@ -1,17 +1,16 @@
-use std::{error::Error, fmt::Debug, sync::Arc};
+use std::{error::Error, fmt::Debug};
 
 use crate::{
-  light::*, math::PositiveReal, raytracing::*, sampling::Sampler, surface_groups::SurfaceGroup,
-  BuildSettings
+  light::*, math::PositiveReal, raytracing::*, sampling::Sampler, scene::Scene, BuildSettings
 };
 
 #[typetag::deserialize(tag = "type")]
 pub trait IntegratorParameters: Debug {
   fn build_integrator(
     &self,
-    surfaces: Arc<dyn SurfaceGroup>,
+    scene: Scene,
     settings: BuildSettings
-  ) -> Result<Box<dyn Integrator + Sync + Send>, Box<dyn Error>>;
+  ) -> Result<Box<dyn Integrator>, Box<dyn Error>>;
 }
 
 #[typetag::deserialize(tag = "type")]
