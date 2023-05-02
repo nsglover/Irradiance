@@ -1,3 +1,6 @@
 /target
+/assets
 /scenes/*.png
 .DS_Store
+cargo-flamegraph.stacks
+flamegraph.svg

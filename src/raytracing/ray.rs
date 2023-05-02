@@ -50,6 +50,10 @@ where Const<D>: ToTypenum
     self.at(t).map(|p| (t, p))
   }
 
+  pub fn within_time_bounds(&self, t: Real) -> bool {
+    MIN_INTERSECT_TIME.into_inner() <= t && t <= self.max_intersect_time.into_inner()
+  }
+
   pub fn origin(&self) -> Point<D, S> { self.origin }
 
   pub fn dir(&self) -> UnitVector<D, S> { self.dir }

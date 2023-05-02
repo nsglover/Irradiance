@@ -6,28 +6,38 @@ use std::{
 };
 
 use image::{DynamicImage, ImageBuffer, Rgb};
-use indicatif::{MultiProgress, ProgressBar, ProgressDrawTarget, ProgressStyle};
+use indicatif::{ProgressBar, ProgressDrawTarget, ProgressStyle};
 use serde::Deserialize;
 use serde_json::Value;
 use threadpool::{Builder, ThreadPool};
 
 use crate::{
-  camera::*, integrators::*, light::*, materials::MaterialParameters, math::*, samplers::*,
-  surface_groups::SurfaceGroupParameters, surfaces::SurfaceParameters, RenderSettings
+  camera::*,
+  integrators::*,
+  light::*,
+  materials::MaterialParameters,
+  math::*,
+  samplers::*,
+  surface_groups::SurfaceGroupParameters,
+  surfaces::{MeshParameters, SurfaceParameters},
+  RenderSettings
 };
 
 #[derive(Debug, Deserialize)]
 struct SceneParameters {
-  #[serde(alias = "image_samples")]
+  #[serde(alias = "samples-per-pixel")]
   pub samples_per_pixel: usize,
 
   #[serde(alias = "camera")]
   pub camera_params: CameraParameters,
 
-  #[serde(alias = "materials")]
+  #[serde(alias = "materials", default)]
   pub material_params: Vec<Box<dyn MaterialParameters>>,
 
-  #[serde(alias = "surfaces")]
+  #[serde(alias = "meshes", default)]
+  pub mesh_params: Vec<MeshParameters>,
+
+  #[serde(alias = "surfaces", default)]
   pub surface_params: Vec<Box<dyn SurfaceParameters>>,
 
   #[serde(alias = "accelerator", default = "crate::surface_groups::default_surface_group")]
@@ -56,16 +66,19 @@ impl Renderer {
       samples_per_pixel,
       camera_params,
       material_params,
+      mesh_params,
       surface_params,
       surface_group_params,
       integrator_params
     } = parse_scene_params(json)?;
 
-    let materials = material_params.into_iter().map(|p| (p.name(), p)).collect();
-    let surfaces = surface_params.into_iter().map(|p| p.build_surface(&materials)).collect();
-    let surface_group = surface_group_params.build_surface_group(surfaces)?;
-    let integrator = integrator_params.build_integrator(surface_group)?;
+    let materials = material_params.into_iter().map(|p| (p.name(), p.build_material())).collect();
+    let meshes = mesh_params.into_iter().map(|p| p.build_mesh()).collect();
+    let surface_group = surface_group_params.build_surface_group(
+      surface_params.into_iter().flat_map(|p| p.build_surfaces(&materials, &meshes)).collect()
+    )?;
 
+    let integrator = integrator_params.build_integrator(surface_group)?;
     Ok(Self { samples_per_pixel, camera: camera_params.build_camera(), integrator })
   }
 
@@ -80,20 +93,6 @@ impl Renderer {
     let num_y_intervals = (height as f64 / (subimg_height as f64)).ceil() as u32;
     let num_subimages = num_x_intervals * num_y_intervals;
 
-    // Create progress bar styles with nice spacing.
-    let offset = usize::max(
-      (num_subimages as f64).log10().ceil() as usize,
-      ((subimg_width * subimg_height) as f64).log10().ceil() as usize
-    );
-
-    let main_bar_style = format!(
-      "[ {{elapsed_precise}} / {{duration_precise}} ]: {{bar:50.green/red}} {{msg:>{offset}}}/{num_subimages} subimages"
-    );
-
-    let sub_bar_style = format!(
-      "Subimage {{msg}}: {{bar:50.cyan/magenta}} {{pos:>{offset}}}/{{len:<{offset}}} pixels",
-    );
-
     // Set up the thread pool with a larger stack size (due to many integrators being highly
     // recursive, terminated only by Russian roulette).
     let thread_pool = Builder::new()
@@ -106,16 +105,6 @@ impl Renderer {
     let integrator = Arc::new(self.integrator);
     let camera = Arc::new(self.camera);
     let image_lock = Arc::new(Mutex::new(image));
-
-    // Create a MultiProgressBar to manage each thread's progress bar.
-    let mut maybe_progress_bars = settings.use_progress_bar.then(|| {
-      let progress_bars = MultiProgress::with_draw_target(ProgressDrawTarget::stdout());
-      let overall_progress_bar = ProgressBar::new((width * height) as u64);
-      overall_progress_bar
-        .set_style(ProgressStyle::with_template(&main_bar_style).unwrap().progress_chars("##-"));
-      progress_bars.add(overall_progress_bar.clone());
-      (progress_bars, Vec::new(), overall_progress_bar)
-    });
 
     // For each pair of intervals, add a subimage window to a collection.
     let mut subimage_windows = Vec::new();
@@ -133,23 +122,26 @@ impl Renderer {
       }
     }
 
-    // Sort the subimages which will most likely to take the longest to render (i.e. the ones with
-    // the with the most pixels) at the bottom.
-    subimage_windows.sort_by(|(_, (w1, h1)), (_, (w2, h2))| (w1 * h1).cmp(&(w2 * h2)));
+    // Make the progress bar style
+    let offset = (num_subimages as f64).log10().ceil() as usize;
+    let main_bar_style = format!(
+      "[ {{elapsed_precise}} / {{msg}} ]: {{bar:50.green/red}} {{pos:>{offset}}}/{num_subimages} subimages"
+    );
 
-    // Send jobs to the threadpool and create progress bars.
-    let style = ProgressStyle::with_template(&sub_bar_style).unwrap().progress_chars("##-");
-    for subimage_window @ (_, (sub_w, sub_h)) in subimage_windows {
-      // Create a progress bar for tracking each pixel rendered in this subimage.
-      let maybe_progress_bar =
-        maybe_progress_bars.as_mut().map(|(progress_bars, progress_bar_list, _)| {
-          let progress_bar = ProgressBar::new((sub_w * sub_h) as u64);
-          progress_bar.set_style(style.clone());
-          progress_bars.add(progress_bar.clone());
-          progress_bar_list.push(progress_bar.clone());
-          progress_bar
-        });
+    // If enabled, start up the progress bar
+    let maybe_progress_bar = settings.use_progress_bar.then(|| {
+      let progress_bar = ProgressBar::with_draw_target(
+        Some(num_subimages as u64),
+        ProgressDrawTarget::stdout_with_hz(24)
+      );
 
+      let style = ProgressStyle::with_template(&main_bar_style).unwrap().progress_chars("##-");
+      progress_bar.set_style(style);
+      progress_bar
+    });
+
+    // Send jobs to the threadpool.
+    for subimage_window in subimage_windows {
       // Send the render job to the threadpool
       Self::async_integrate_subimage(
         &thread_pool,
@@ -157,28 +149,47 @@ impl Renderer {
         &camera,
         self.samples_per_pixel,
         &image_lock,
-        subimage_window,
-        maybe_progress_bar
+        subimage_window
       );
     }
 
-    if let Some((_, progress_bar_list, overall_progress_bar)) = &maybe_progress_bars {
-      while thread_pool.queued_count() > 0 {
-        thread::sleep(Duration::from_millis(100));
-        let total_progress: u64 = progress_bar_list.iter().map(|p| p.position()).sum();
-        overall_progress_bar.set_position(total_progress);
-        thread::sleep(Duration::from_millis(10));
-        overall_progress_bar.set_message(format!(
-          "{}",
-          num_subimages as usize - (thread_pool.queued_count() + thread_pool.active_count()),
-        ))
-      }
-    };
+    // A helper to display durations
+    fn duration_to_string(d: Duration) -> String {
+      let seconds = d.as_secs() % 60;
+      let minutes = (d.as_secs() / 60) % 60;
+      let hours = (d.as_secs() / 60) / 60;
+      format!("{:0>2}:{:0>2}:{:0>2}", hours, minutes, seconds)
+    }
 
-    // Wait for the threads and mark the overall progress bar as finished.
+    // Manually update the progress bar as the threads run.
+    if let Some(progress_bar) = &maybe_progress_bar {
+      loop {
+        let num_incomplete = thread_pool.queued_count() + thread_pool.active_count();
+        let num_complete = num_subimages as usize - num_incomplete;
+        progress_bar.set_position(num_complete as u64);
+
+        let elapsed = progress_bar.elapsed().as_secs_f64();
+        let ratio = if num_complete == 0 {
+          num_subimages as f64
+        } else {
+          (num_subimages as f64) / (num_complete as f64)
+        };
+
+        let projected = Duration::from_secs_f64(elapsed * ratio);
+        progress_bar.set_message(duration_to_string(projected));
+
+        thread::sleep(Duration::from_millis(250));
+        if num_incomplete == 0 {
+          break;
+        }
+      }
+    }
+
+    // Wait for the threads to finish and mark the overall progress bar as finished.
     thread_pool.join();
-    if let Some((_, _, overall_progress_bar)) = maybe_progress_bars {
-      overall_progress_bar.finish_with_message(format!("{}", num_subimages))
+    if let Some(progress_bar) = maybe_progress_bar {
+      progress_bar.set_message(duration_to_string(progress_bar.elapsed()));
+      progress_bar.finish();
     }
 
     // Return the resulting image.
@@ -191,8 +202,7 @@ impl Renderer {
     camera: &Arc<Camera>,
     samples_per_pixel: usize,
     image_lock: &Arc<Mutex<Image>>,
-    ((sub_x, sub_y), (sub_w, sub_h)): ((u32, u32), (u32, u32)),
-    maybe_progress_bar: Option<ProgressBar>
+    ((sub_x, sub_y), (sub_w, sub_h)): ((u32, u32), (u32, u32))
   ) {
     // Copy the ARCs.
     let integrator = integrator.clone();
@@ -203,11 +213,6 @@ impl Renderer {
     thread_pool.execute(move || {
       // Create a temporary image buffer to render into.
       let mut subimage = Image::new(sub_w, sub_h);
-
-      // Set the progress bar message to indicate that this thread has officially started
-      if let Some(progress_bar) = maybe_progress_bar.as_ref() {
-        progress_bar.set_message(format!("( {:<4}, {:>4} )", sub_x, sub_y));
-      }
 
       // Precompute 1 / samples_per_pixel to save some time.
       let inv_spp = 1.0 / (samples_per_pixel as Real);
@@ -244,11 +249,6 @@ impl Renderer {
           // Convert the sRGB pixel value into bytes and write to the temporary buffer.
           let bytes = srgb.bytes();
           subimage.put_pixel(x, y, image::Rgb([bytes[0], bytes[1], bytes[2]]));
-
-          // Increment the progress bar to count pixel (x, y) as done.
-          if let Some(progress_bar) = maybe_progress_bar.as_ref() {
-            progress_bar.inc(1)
-          }
         }
       }
 
@@ -258,10 +258,6 @@ impl Renderer {
         for y in 0..sub_h {
           image.put_pixel(sub_x + x, sub_y + y, *subimage.get_pixel(x, y));
         }
-      }
-
-      if let Some(progress_bar) = maybe_progress_bar {
-        progress_bar.finish_and_clear()
       }
     })
   }

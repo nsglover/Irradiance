@@ -9,7 +9,7 @@
 		"fdist": 800,
     "resolution": [2048, 2048]
 	},
-	"image_samples": 16384,
+	"samples-per-pixel": 16384,
 	"background": [0,0,0],
 	"accelerator":
 	{

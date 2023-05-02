@@ -7,17 +7,19 @@
 		},
 		"vfov": 40,
 		"fdist": 800,
-    "resolution": [512, 512]
+    "resolution": [1024, 1024]
 	},
-	"samples-per-pixel": 512,
+	"samples-per-pixel": 1024,
 	"background": [0,0,0],
 	"accelerator":
 	{
-    "type": "list"
+    "type": "bvh",
+    "strategy": "sah",
+    "max-leaf-prims": 5
 	},
   "integrator":
   {
-    "type": "mixture-path-tracer",
+    "type": "material-path-tracer",
     "average-path-length": 256
   },
 	"materials": [
@@ -41,22 +43,44 @@
 			"name": "light",
 			"emit": {"type": "constant", "color": 1},
       "intensity": 15
+		},
+		{
+			"type": "mirror",
+			"name": "metal",
+			"albedo": {"type": "constant", "color": 0.8}
+		},
+		{
+			"type": "dielectric",
+			"name": "glass",
+			"albedo": {"type": "constant", "color": 1},
+      "ior": 1.5
 		}
 	],
+  "meshes": [
+    {
+			"filename": "assets/dragon.obj",
+      "name": "dragon"
+		}
+  ],
 	"surfaces": [
 		{
 			"type": "quad",
 			"transform": [
+        {
+          "scale": 555
+        },
 				{
 					"translate": [0, 0, -277.5]
 				}
 			],
-			"size": [555,555],
 			"material": "white"
 		},
 		{
 			"type": "quad",
 			"transform": [
+        {
+          "scale": 555
+        },
 				{
 					"axis": [1, 0, 0],
 					"angle": 90
@@ -71,6 +95,9 @@
 		{
 			"type": "quad",
 			"transform": [
+        {
+          "scale": 555
+        },
 				{
 					"axis": [1, 0, 0],
 					"angle": -90
@@ -79,12 +106,14 @@
 					"translate": [0, -277.5, 0]
 				}
 			],
-			"size": [555,555],
 			"material": "white"
 		},
 		{
 			"type": "quad",
 			"transform": [
+        {
+          "scale": 555
+        },
 				{
 					"axis": [0, 1, 0],
 					"angle": 90
@@ -93,12 +122,14 @@
 					"translate": [-277.5, 0, 0]
 				}
 			],
-			"size": [555,555],
 			"material": "green"
 		},
 		{
 			"type": "quad",
 			"transform": [
+        {
+          "scale": 555
+        },
 				{
 					"axis": [0, 1, 0],
 					"angle": -90
@@ -107,12 +138,14 @@
 					"translate": [277.5, 0, 0]
 				}
 			],
-			"size": [555,555],
 			"material": "red"
 		},
 		{
 			"type": "quad",
 			"transform": [
+        {
+          "scale": 130
+        },
 				{
 					"axis": [1, 0, 0],
 					"angle": 90
@@ -121,8 +154,25 @@
 					"translate": [0, 277, 0]
 				}
 			],
-			"size": [130,130],
 			"material": "light"
+		},
+    {
+			"type": "mesh",
+			"transform": [
+                { "scale": 100 },
+                { "translate": [140,-177.5,100]}
+            ],
+			"mesh": "dragon",
+			"material": "metal"
+		},
+		{
+			"type": "mesh",
+			"transform": [
+                { "scale": 100 },
+                { "translate": [-140,-177.5,-100] }
+            ],
+			"mesh": "dragon",
+			"material": "glass"
 		}
 	]
 }

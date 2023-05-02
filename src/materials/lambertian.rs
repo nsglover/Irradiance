@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 use serde::Deserialize;
 
 use super::*;
@@ -13,14 +15,14 @@ struct LambertianParameters {
 impl MaterialParameters for LambertianParameters {
   fn name(&self) -> String { self.name.clone() }
 
-  fn build_material(&self) -> Box<dyn Material> {
-    Box::new(Lambertian { albedo: self.albedo.build_texture() })
+  fn build_material(&self) -> Rc<dyn Material> {
+    Rc::new(Lambertian { albedo: self.albedo.build_texture() })
   }
 }
 
 #[derive(Debug)]
 pub struct Lambertian {
-  albedo: Box<dyn Texture>
+  albedo: Rc<dyn Texture>
 }
 
 impl Material for Lambertian {

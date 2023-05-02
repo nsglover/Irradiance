@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 use serde::Deserialize;
 
 use super::*;
@@ -14,8 +16,8 @@ struct DiffuseLightParameters {
 impl MaterialParameters for DiffuseLightParameters {
   fn name(&self) -> String { self.name.clone() }
 
-  fn build_material(&self) -> Box<dyn Material> {
-    Box::new(DiffuseLight {
+  fn build_material(&self) -> Rc<dyn Material> {
+    Rc::new(DiffuseLight {
       light_color: self.emit.build_texture(),
       light_intensity: self.intensity
     })
@@ -24,7 +26,7 @@ impl MaterialParameters for DiffuseLightParameters {
 
 #[derive(Debug)]
 pub struct DiffuseLight {
-  light_color: Box<dyn Texture>,
+  light_color: Rc<dyn Texture>,
   light_intensity: Real
 }
 

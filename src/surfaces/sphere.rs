@@ -1,15 +1,9 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, rc::Rc};
 
 use serde::Deserialize;
 
 use super::*;
-use crate::{
-  common::Wrapper,
-  materials::{Material, MaterialParameters},
-  math::*,
-  raytracing::*,
-  samplers::Sampler
-};
+use crate::{common::Wrapper, materials::Material, math::*, raytracing::*, samplers::Sampler};
 
 #[derive(Debug, Deserialize)]
 pub struct SphereSurfaceParameters {
@@ -19,14 +13,15 @@ pub struct SphereSurfaceParameters {
 
 #[typetag::deserialize(name = "sphere")]
 impl SurfaceParameters for SphereSurfaceParameters {
-  fn build_surface(
+  fn build_surfaces(
     &self,
-    materials: &HashMap<String, Box<dyn MaterialParameters>>
-  ) -> Box<dyn Surface> {
-    Box::new(SphereSurface {
+    materials: &HashMap<String, Rc<dyn Material>>,
+    _: &HashMap<String, Mesh>
+  ) -> Vec<Box<dyn Surface>> {
+    vec![Box::new(SphereSurface {
       transform: self.transform.clone().build_transform(),
-      material: materials.get(&self.material).unwrap().build_material()
-    })
+      material: materials.get(&self.material).unwrap().clone()
+    })]
   }
 }
 
@@ -38,7 +33,7 @@ impl Space<3> for SphereSpace {}
 #[derive(Debug)]
 pub struct SphereSurface {
   transform: LocalToWorld<SphereSpace>,
-  material: Box<dyn Material>
+  material: Rc<dyn Material>
 }
 
 impl TransformedSurface for SphereSurface {

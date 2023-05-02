@@ -1,5 +1,5 @@
 use super::*;
-use crate::{math::*, surfaces::Surface, textures::TextureCoordinates};
+use crate::{math::*, surfaces::Surface, textures::TextureCoordinate};
 
 #[derive(Debug, Clone)]
 pub struct RayIntersection<'a, S: Space<3>> {
@@ -9,7 +9,7 @@ pub struct RayIntersection<'a, S: Space<3>> {
   pub intersect_point: Point3<S>,
   pub geometric_normal: UnitVector3<S>,
   pub shading_normal: UnitVector3<S>,
-  pub tex_coords: TextureCoordinates
+  pub tex_coords: TextureCoordinate
 }
 
 impl<'a, S: Space<3>> RayIntersection<'a, S> {

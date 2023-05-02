@@ -21,7 +21,7 @@ where Const<D>: ToTypenum
     UnitVector { inner: self.inner, _phantom: Phantom::default() }
   }
 
-  pub fn reflect_about(&self, normal: UnitVector<D, S>) -> Self {
+  pub fn reflect_about(&self, normal: Self) -> Self {
     let d = self.inner().into_inner();
     let n = normal.inner().into_inner();
     let mut r = na::Unit::new_unchecked(n * 2.0 * d.dot(&n) - d);

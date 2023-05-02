@@ -1,10 +1,10 @@
-use std::fmt::Debug;
+use std::{fmt::Debug, rc::Rc};
 
 use crate::{light::*, math::*, raytracing::WorldRayIntersection};
 
 #[typetag::deserialize(tag = "type")]
 pub trait TextureParameters: Debug {
-  fn build_texture(&self) -> Box<dyn Texture>;
+  fn build_texture(&self) -> Rc<dyn Texture>;
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -12,7 +12,7 @@ pub struct TextureSpace;
 
 impl Space<2> for TextureSpace {}
 
-pub type TextureCoordinates = Vector<2, TextureSpace>;
+pub type TextureCoordinate = Vector<2, TextureSpace>;
 
 pub trait Texture: Debug {
   fn value(&self, hit: &WorldRayIntersection) -> Color;

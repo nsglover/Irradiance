@@ -1,25 +1,21 @@
-use std::{collections::HashMap, fmt::Debug};
+use std::{collections::HashMap, fmt::Debug, rc::Rc};
 
-use crate::{
-  common::Wrapper,
-  materials::{Material, MaterialParameters},
-  math::*,
-  raytracing::*,
-  samplers::Sampler
-};
+use super::Mesh;
+use crate::{common::Wrapper, materials::Material, math::*, raytracing::*, samplers::Sampler};
 
 #[typetag::deserialize(tag = "type")]
 pub trait SurfaceParameters: Debug {
-  fn build_surface(
+  fn build_surfaces(
     &self,
-    materials: &HashMap<String, Box<dyn MaterialParameters>>
-  ) -> Box<dyn Surface>;
+    materials: &HashMap<String, Rc<dyn Material>>,
+    meshes: &HashMap<String, Mesh>
+  ) -> Vec<Box<dyn Surface>>;
 }
 
 pub trait Surface: Debug {
   fn world_bounding_box(&self) -> WorldBoundingBox;
 
-  fn intersect_world_ray(&self, ray: &WorldRay) -> Option<WorldRayIntersection>;
+  fn intersect_world_ray(&self, ray: WorldRay) -> Option<WorldRayIntersection>;
 
   fn interesting_direction_sample(
     &self,
@@ -85,9 +81,9 @@ impl<T: TransformedSurface + Debug> Surface for T {
     }
   }
 
-  fn intersect_world_ray(&self, ray: &WorldRay) -> Option<WorldRayIntersection> {
+  fn intersect_world_ray(&self, ray: WorldRay) -> Option<WorldRayIntersection> {
     let tr = self.local_to_world();
-    self.intersect_ray(tr.inverse_ray(ray)).map(|local_hit| tr.ray_intersect(&local_hit))
+    self.intersect_ray(tr.inverse_ray(&ray)).map(|local_hit| tr.ray_intersect(&local_hit))
   }
 
   fn interesting_direction_sample(

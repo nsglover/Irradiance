@@ -1,4 +1,4 @@
-// mod bvh;
+mod bvh;
 mod surface_group;
 mod surface_list;
 

@@ -19,14 +19,12 @@ mod textures;
 // For the semester:
 
 // Project Features:
-// TODO: K-D Tree
 // TODO: Photon mapping
 // TODO: Unbiased photon mapping
 // TODO: If time permits, MIS with unbiased photon mapping and material path tracing
 // TODO: README.md
 
 // Important Features:
-// TODO: Mesh loading and the triangle surface
 // TODO: Direct-lighting MIS and mixture sampling
 // TODO: Stratified sampling
 // TODO: Image loading and image texture
@@ -38,12 +36,12 @@ mod textures;
 //       (perhaps use some sort of PositiveReal type?). Make a generalized random variable trait and
 //       a BRDF class; materials are nothing more than a BRDF and a random variable, which aim to
 //       to importance sample everything but the L_i term in the rendering equation.
+// TODO: Investigate the performance disparity and fix it
 // TODO: Generalize MIS and mixture integrators to work with any number of arbitrary integrators
 
-// Improvements:
-// TODO: Materials should have references (not boxes) to textures
-// TODO: Surfaces should have references (not boxes) to materials
-// TODO: Stop cloning rays in BVH
+// Minor Improvements:
+// TODO: Stop cloning rays
+// TODO: All parameter structs should be consumed upon building their target
 
 // Side Features:
 // TODO: Perlin noise
@@ -105,7 +103,7 @@ fn main() -> Result<(), Box<dyn Error>> {
   let renderer = Renderer::build_from_json(json)?;
   println!("Building complete! Time: {}\n", duration_to_hms(&build_time.elapsed()));
 
-  println!("Rendering scene \"{scene_name}\"...");
+  println!("Rendering scene \"{scene_name}.json\"...");
   let render_time = std::time::Instant::now();
   let image = renderer.render_scene(RenderSettings {
     num_threads,

@@ -1,16 +1,12 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, rc::Rc};
 
 use nalgebra as na;
 use serde::Deserialize;
 
 use super::*;
 use crate::{
-  common::Wrapper,
-  materials::{Material, MaterialParameters},
-  math::*,
-  raytracing::*,
-  samplers::Sampler,
-  textures::TextureCoordinates
+  common::Wrapper, materials::Material, math::*, raytracing::*, samplers::Sampler,
+  textures::TextureCoordinate
 };
 
 #[derive(Debug, Deserialize)]
@@ -21,15 +17,16 @@ pub struct QuadSurfaceParameters {
 
 #[typetag::deserialize(name = "quad")]
 impl SurfaceParameters for QuadSurfaceParameters {
-  fn build_surface(
+  fn build_surfaces(
     &self,
-    materials: &HashMap<String, Box<dyn MaterialParameters>>
-  ) -> Box<dyn Surface> {
-    Box::new(QuadSurface {
+    materials: &HashMap<String, Rc<dyn Material>>,
+    _: &HashMap<String, Mesh>
+  ) -> Vec<Box<dyn Surface>> {
+    vec![Box::new(QuadSurface {
       transform: self.transform.clone().build_transform(),
-      material: materials.get(&self.material).unwrap().build_material(),
+      material: materials.get(&self.material).unwrap().clone(),
       normal: Vector3::from(na::vector![0.0, 0.0, 1.0]).normalize()
-    })
+    })]
   }
 }
 
@@ -41,7 +38,7 @@ impl Space<3> for QuadSpace {}
 #[derive(Debug)]
 pub struct QuadSurface {
   transform: LocalToWorld<QuadSpace>,
-  material: Box<dyn Material>,
+  material: Rc<dyn Material>,
   normal: UnitVector3<<Self as TransformedSurface>::LocalSpace>
 }
 
@@ -65,19 +62,24 @@ impl TransformedSurface for QuadSurface {
     let t = -ray.origin().inner().z / ray.dir().inner().z;
     ray.at_real(t).and_then(|(t, point)| {
       let mut p = point.into_inner();
-      p.z = 0.0;
       if 0.5 < p.x || -0.5 > p.x || 0.5 < p.y || -0.5 > p.y {
         return None;
       }
 
-      let tex_coords = TextureCoordinates::from(na::vector![p.x + 0.5, p.y + 0.5]);
+      p.z = 0.0;
+      let mut normal = self.normal;
+      if ray.dir().dot(&normal) > 0.0 {
+        normal = -normal;
+      }
+
+      let tex_coords = TextureCoordinate::from(na::vector![p.x + 0.5, p.y + 0.5]);
       Some(RayIntersection {
         ray,
         surface: self,
         intersect_time: t,
         intersect_point: p.into(),
-        geometric_normal: self.normal,
-        shading_normal: self.normal,
+        geometric_normal: normal,
+        shading_normal: normal,
         tex_coords
       })
     })

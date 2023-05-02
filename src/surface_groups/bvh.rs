@@ -1,4 +1,4 @@
-use std::rc::Rc;
+use std::{fmt::Display, rc::Rc};
 
 use rand::{distributions::Uniform, Rng};
 use serde_derive::Deserialize;
@@ -30,8 +30,7 @@ impl SurfaceGroupParameters for BvhParameters {
     &self,
     surfaces: Vec<Box<dyn Surface>>
   ) -> Result<Rc<dyn SurfaceGroup>, Box<dyn std::error::Error>> {
-    // Ok(Box::new(BoundingVolumeHierarchy::build(surfaces, self)))
-    todo!()
+    Ok(Rc::new(BoundingVolumeHierarchy::build(surfaces, self)))
   }
 }
 
@@ -49,7 +48,7 @@ struct BvhNode {
 
 impl BvhNode {
   fn intersect(&self, mut ray: WorldRay) -> Option<WorldRayIntersection> {
-    if self.bounding_box.ray_intersects(&ray) {
+    if self.bounding_box.ray_intersects_fast(&ray) {
       match &self.node_type {
         BvhNodeType::Leaf(surface_list) => surface_list.intersect_world_ray(ray),
         BvhNodeType::Node(maybe_left, maybe_right) => {
@@ -81,6 +80,33 @@ impl BvhNode {
       None
     }
   }
+
+  fn fmt_recursive(&self, f: &mut std::fmt::Formatter, prefix: String) -> std::fmt::Result {
+    writeln!(f, "{}Box: {}, {}", prefix, self.bounding_box.min(), self.bounding_box.max())?;
+    match &self.node_type {
+      BvhNodeType::Leaf(s) => writeln!(f, "{}Leaf({})", prefix, s.num_surfaces()),
+      BvhNodeType::Node(maybe_left, maybe_right) => {
+        writeln!(f, "{}Node:", prefix)?;
+        writeln!(f, "{}LEFT:", prefix)?;
+        if let Some(left) = maybe_left {
+          left.fmt_recursive(f, prefix.clone() + " - ")?;
+        }
+
+        writeln!(f, "\n{}RIGHT:", prefix)?;
+        if let Some(right) = maybe_right {
+          right.fmt_recursive(f, prefix + " - ")?;
+        }
+
+        Ok(())
+      }
+    }
+  }
+}
+
+impl Display for BvhNode {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    self.fmt_recursive(f, String::default())
+  }
 }
 
 #[derive(Debug)]
@@ -92,7 +118,6 @@ pub struct BoundingVolumeHierarchy {
 impl BoundingVolumeHierarchy {
   fn build_node(mut surfaces: Vec<Box<dyn Surface>>, params: &BvhParameters) -> Option<BvhNode> {
     let num_surfaces = surfaces.len();
-
     let bounding_boxes: Vec<_> = surfaces.iter().map(|s| s.world_bounding_box()).collect();
     let bounding_box = bounding_boxes.iter().fold(WorldBoundingBox::default(), |mut acc, bbox| {
       acc.enclose_box(bbox);
@@ -110,13 +135,82 @@ impl BoundingVolumeHierarchy {
       let right: Option<BvhNode>;
       match params.partition_strategy {
         PartitionStrategy::SurfaceAreaHeuristic => {
-          // const NUM_BUCKETS: usize = 12;
-          // let num_buckets = Self::NUM_BUCKETS.min(num_surfaces);
-          todo!()
+          const NUM_BUCKETS: usize = 12;
+          let num_buckets = NUM_BUCKETS.min(num_surfaces);
+          let mut buckets = vec![(WorldBoundingBox::default(), 0usize); num_buckets];
+
+          let mut split_axis = None;
+          let mut split_boundary = 0.0;
+          let mut split_cost = bounding_box.surface_area() * (num_surfaces as Real);
+
+          for axis in 0..3 {
+            let extent = bounding_box.diagonal();
+            if extent[axis] < 0.00001 {
+              continue;
+            }
+
+            let bucket_width = extent[axis] / (num_buckets as Real);
+            for bucket in buckets.iter_mut() {
+              bucket.0 = WorldBoundingBox::default();
+              bucket.1 = 0;
+            }
+
+            for surface in &surfaces {
+              let surface_bbox = surface.world_bounding_box();
+              let dist = (surface_bbox.center()[axis] - bounding_box.min()[axis]) / bucket_width;
+              let bucket_index = (dist as usize).clamp(0, num_buckets - 1);
+              buckets[bucket_index].0.enclose_box(&surface_bbox);
+              buckets[bucket_index].1 += 1;
+            }
+
+            for idx in 0..num_buckets {
+              let mut num_left = 0;
+              let mut left_box = WorldBoundingBox::default();
+              for i in 0..idx {
+                left_box.enclose_box(&buckets[i].0);
+                num_left += buckets[i].1;
+              }
+
+              let mut num_right = 0;
+              let mut right_box = WorldBoundingBox::default();
+              for i in idx..num_buckets {
+                right_box.enclose_box(&buckets[i].0);
+                num_right += buckets[i].1;
+              }
+
+              let cost = (num_left as Real) * left_box.surface_area()
+                + (num_right as Real) * right_box.surface_area();
+              let boundary = bounding_box.min()[axis] + (idx as Real) * bucket_width;
+
+              if cost < split_cost {
+                split_axis = Some(axis);
+                split_boundary = boundary;
+                split_cost = cost;
+              }
+            }
+          }
+
+          let axis = split_axis.unwrap_or(0);
+          let (mut left_surfaces, mut right_surfaces): (Vec<_>, Vec<_>) = surfaces
+            .into_iter()
+            .partition(|s| s.world_bounding_box().center()[axis] < split_boundary);
+
+          if left_surfaces.len() == 0 {
+            let mut right_iter = right_surfaces.into_iter();
+            left_surfaces = right_iter.by_ref().take(num_surfaces / 2).collect();
+            right_surfaces = right_iter.collect();
+          } else if right_surfaces.len() == 0 {
+            let mut left_iter = left_surfaces.into_iter();
+            right_surfaces = left_iter.by_ref().take(num_surfaces / 2).collect();
+            left_surfaces = left_iter.collect();
+          }
+
+          left = Self::build_node(left_surfaces, params);
+          right = Self::build_node(right_surfaces, params);
         },
         PartitionStrategy::Random => {
           let axis = rand::thread_rng().sample(Uniform::new(0, 3));
-          let num_left = rand::thread_rng().sample(Uniform::new_inclusive(0, num_surfaces));
+          let num_left = num_surfaces / 2;
 
           surfaces.sort_by(|s1, s2| {
             s1.world_bounding_box().center()[axis]
@@ -152,12 +246,12 @@ impl SurfaceGroup for BoundingVolumeHierarchy {
     self.root_node.intersect(ray)
   }
 
-  fn pdf(&self, point: &WorldPoint, direction: &WorldUnitVector) -> Real { todo!() }
+  fn pdf(&self, _point: &WorldPoint, _direction: &WorldUnitVector) -> Real { todo!() }
 
   fn sample_and_pdf(
     &self,
-    point: &WorldPoint,
-    sampler: &mut dyn crate::samplers::Sampler
+    _point: &WorldPoint,
+    _sampler: &mut dyn crate::samplers::Sampler
   ) -> (WorldUnitVector, Real) {
     todo!()
   }

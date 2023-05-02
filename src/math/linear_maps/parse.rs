@@ -1,17 +1,8 @@
 use nalgebra as na;
 use serde::Deserialize;
 
-use super::{
-  identity::IdentityTransform, rotate::RotateTransform, scale::ScaleTransform,
-  translate::TranslateTransform, uniform_scale::UniformScaleTransform, *
-};
-use crate::math::{
-  linear_maps::{
-    rot_trans::RotateTranslate, scale_rot::ScaleRotate, scale_rot_trans::ScaleRotateTranslate,
-    scale_trans::ScaleTranslate
-  },
-  PositiveReal, Real, Space, PI
-};
+use super::*;
+use crate::math::{Real, Space, PI};
 
 fn array_to_vec(array: [Real; 3]) -> na::Vector3<Real> { na::vector![array[0], array[1], array[2]] }
 
@@ -71,80 +62,80 @@ impl TransformParameters {
     }
   }
 
-  fn build_from_vec<In: Space<3> + 'static, Out: Space<3> + 'static>(
-    params: Vec<SingleTransformParameters>
-  ) -> Box<dyn Transform<In, Out>> {
-    use SingleTransformParameters as P;
+  // fn build_from_vec<In: Space<3> + 'static, Out: Space<3> + 'static>(
+  //   params: Vec<SingleTransformParameters>
+  // ) -> Box<dyn Transform<In, Out>> {
+  //   use SingleTransformParameters as P;
 
-    match &params[..] {
-      [] => Box::new(IdentityTransform {}),
-      [m] => match m {
-        P::Translate { translate } => {
-          Box::new(TranslateTransform::new(translate[0], translate[1], translate[2]))
-        },
-        P::UniformScale { scale } => {
-          if let Some(s) = PositiveReal::new(*scale) {
-            Box::new(UniformScaleTransform::new(s))
-          } else {
-            Box::new(ScaleTransform::new(*scale, *scale, *scale))
-          }
-        },
-        P::NonUniformScale { scale } => Box::new(ScaleTransform::new(scale[0], scale[1], scale[2])),
-        P::AxisAngle { axis, angle } => {
-          Box::new(RotateTransform::new(axis[0], axis[1], axis[2], *angle * PI / 180.0))
-        },
-        _ => Self::build_matrix_transform(params)
-      },
-      [m1, m2] => match (m1, m2) {
-        (P::UniformScale { scale }, P::Translate { translate }) => {
-          if let Some(s) = PositiveReal::new(*scale) {
-            Box::new(ScaleTranslate::new(
-              UniformScaleTransform::<In, Out>::new(s),
-              TranslateTransform::new(translate[0], translate[1], translate[2])
-            ))
-          } else {
-            Self::build_matrix_transform(params)
-          }
-        },
-        (P::UniformScale { scale }, P::AxisAngle { axis, angle }) => {
-          if let Some(s) = PositiveReal::new(*scale) {
-            Box::new(ScaleRotate::new(
-              UniformScaleTransform::<In, Out>::new(s),
-              RotateTransform::new(axis[0], axis[1], axis[2], *angle * PI / 180.0)
-            ))
-          } else {
-            Self::build_matrix_transform(params)
-          }
-        },
-        (P::AxisAngle { axis, angle }, P::Translate { translate }) => {
-          Box::new(RotateTranslate::new(
-            RotateTransform::<In, Out>::new(axis[0], axis[1], axis[2], *angle * PI / 180.0),
-            TranslateTransform::new(translate[0], translate[1], translate[2])
-          ))
-        },
-        _ => Self::build_matrix_transform(params)
-      },
-      [P::UniformScale { scale }, P::AxisAngle { axis, angle }, P::Translate { translate }] => {
-        if let Some(s) = PositiveReal::new(*scale) {
-          Box::new(ScaleRotateTranslate::new(
-            UniformScaleTransform::<In, Out>::new(s),
-            RotateTransform::<Out, Out>::new(axis[0], axis[1], axis[2], *angle * PI / 180.0),
-            TranslateTransform::new(translate[0], translate[1], translate[2])
-          ))
-        } else {
-          Self::build_matrix_transform(params)
-        }
-      },
-      _ => Self::build_matrix_transform(params)
-    }
-  }
+  //   match &params[..] {
+  //     [] => Box::new(IdentityTransform {}),
+  //     [m] => match m {
+  //       P::Translate { translate } => {
+  //         Box::new(TranslateTransform::new(translate[0], translate[1], translate[2]))
+  //       },
+  //       P::UniformScale { scale } => {
+  //         if let Some(s) = PositiveReal::new(*scale) {
+  //           Box::new(UniformScaleTransform::new(s))
+  //         } else {
+  //           Box::new(ScaleTransform::new(*scale, *scale, *scale))
+  //         }
+  //       },
+  //       P::NonUniformScale { scale } => Box::new(ScaleTransform::new(scale[0], scale[1],
+  // scale[2])),       P::AxisAngle { axis, angle } => {
+  //         Box::new(RotateTransform::new(axis[0], axis[1], axis[2], *angle * PI / 180.0))
+  //       },
+  //       _ => Self::build_matrix_transform(params)
+  //     },
+  //     [m1, m2] => match (m1, m2) {
+  //       (P::UniformScale { scale }, P::Translate { translate }) => {
+  //         if let Some(s) = PositiveReal::new(*scale) {
+  //           Box::new(ScaleTranslate::new(
+  //             UniformScaleTransform::<In, Out>::new(s),
+  //             TranslateTransform::new(translate[0], translate[1], translate[2])
+  //           ))
+  //         } else {
+  //           Self::build_matrix_transform(params)
+  //         }
+  //       },
+  //       (P::UniformScale { scale }, P::AxisAngle { axis, angle }) => {
+  //         if let Some(s) = PositiveReal::new(*scale) {
+  //           Box::new(ScaleRotate::new(
+  //             UniformScaleTransform::<In, Out>::new(s),
+  //             RotateTransform::new(axis[0], axis[1], axis[2], *angle * PI / 180.0)
+  //           ))
+  //         } else {
+  //           Self::build_matrix_transform(params)
+  //         }
+  //       },
+  //       (P::AxisAngle { axis, angle }, P::Translate { translate }) => {
+  //         Box::new(RotateTranslate::new(
+  //           RotateTransform::<In, Out>::new(axis[0], axis[1], axis[2], *angle * PI / 180.0),
+  //           TranslateTransform::new(translate[0], translate[1], translate[2])
+  //         ))
+  //       },
+  //       _ => Self::build_matrix_transform(params)
+  //     },
+  //     [P::UniformScale { scale }, P::AxisAngle { axis, angle }, P::Translate { translate }] => {
+  //       if let Some(s) = PositiveReal::new(*scale) {
+  //         Box::new(ScaleRotateTranslate::new(
+  //           UniformScaleTransform::<In, Out>::new(s),
+  //           RotateTransform::<Out, Out>::new(axis[0], axis[1], axis[2], *angle * PI / 180.0),
+  //           TranslateTransform::new(translate[0], translate[1], translate[2])
+  //         ))
+  //       } else {
+  //         Self::build_matrix_transform(params)
+  //       }
+  //     },
+  //     _ => Self::build_matrix_transform(params)
+  //   }
+  // }
 
   pub fn build_transform<In: Space<3> + 'static, Out: Space<3> + 'static>(
     self
   ) -> Box<dyn Transform<In, Out>> {
     match self {
-      TransformParameters::Single(m) => Self::build_from_vec(vec![m]),
-      TransformParameters::Composed(ms) => Self::build_from_vec(ms)
+      TransformParameters::Single(m) => Self::build_matrix_transform(vec![m]),
+      TransformParameters::Composed(ms) => Self::build_matrix_transform(ms)
     }
   }
 }

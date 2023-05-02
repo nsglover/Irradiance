@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 use serde::Deserialize;
 
 use super::*;
@@ -14,14 +16,14 @@ struct DieletricParameters {
 impl MaterialParameters for DieletricParameters {
   fn name(&self) -> String { self.name.clone() }
 
-  fn build_material(&self) -> Box<dyn Material> {
-    Box::new(Dieletric { albedo: self.albedo.build_texture(), index_of_refraction: self.ior })
+  fn build_material(&self) -> Rc<dyn Material> {
+    Rc::new(Dieletric { albedo: self.albedo.build_texture(), index_of_refraction: self.ior })
   }
 }
 
 #[derive(Debug)]
 pub struct Dieletric {
-  albedo: Box<dyn Texture>,
+  albedo: Rc<dyn Texture>,
   index_of_refraction: Real
 }
 

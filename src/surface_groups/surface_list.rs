@@ -43,8 +43,8 @@ impl SurfaceGroup for SurfaceList {
   fn intersect_world_ray(&self, mut ray: WorldRay) -> Option<WorldRayIntersection> {
     let mut closest = None;
     for (surface, bbox) in &self.surfaces {
-      if bbox.ray_intersects(&ray) {
-        if let Some(hit) = surface.intersect_world_ray(&ray) {
+      if bbox.ray_intersects_fast(&ray) {
+        if let Some(hit) = surface.intersect_world_ray(ray.clone()) {
           ray.set_max_intersect_time(hit.intersect_time);
           closest = Some(hit);
         }

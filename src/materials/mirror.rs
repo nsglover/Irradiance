@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 use serde::Deserialize;
 
 use super::*;
@@ -13,14 +15,14 @@ struct MirrorParameters {
 impl MaterialParameters for MirrorParameters {
   fn name(&self) -> String { self.name.clone() }
 
-  fn build_material(&self) -> Box<dyn Material> {
-    Box::new(Mirror { albedo: self.albedo.build_texture() })
+  fn build_material(&self) -> Rc<dyn Material> {
+    Rc::new(Mirror { albedo: self.albedo.build_texture() })
   }
 }
 
 #[derive(Debug)]
 pub struct Mirror {
-  albedo: Box<dyn Texture>
+  albedo: Rc<dyn Texture>
 }
 
 impl Material for Mirror {

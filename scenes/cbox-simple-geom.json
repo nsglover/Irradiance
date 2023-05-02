@@ -6,19 +6,21 @@
 			"up": [0, 1, 0]
 		},
 		"vfov": 40,
-		"fdist": 800
+		"fdist": 800,
+    "resolution": [512, 512]
 	},
-	"image_samples": 512,
+	"samples-per-pixel": 512,
 	"background": [0,0,0],
 	"accelerator":
 	{
     "type": "bvh",
-    "max-leaf-prims": 2,
-    "strategy": "random"
+    "strategy": "sah",
+    "max-leaf-prims": 10
 	},
   "integrator":
   {
-    "type": "normals"
+    "type": "material-path-tracer",
+    "average-path-length": 256
   },
 	"materials": [
 		{
@@ -40,7 +42,7 @@
 			"type": "diffuse light",
 			"name": "light",
 			"emit": {"type": "constant", "color": 1},
-      "intensity": 15
+      "intensity": 2.6
 		},
 		{
 			"type": "lambertian",
@@ -53,20 +55,35 @@
 			"albedo": {"type": "constant", "color": [0.25, 0.75, 0.25]}
 		}
 	],
+  "meshes": [
+    {
+			"filename": "assets/cylinder.obj",
+      "name": "cylinder"
+		},
+		{
+			"filename": "assets/cone.obj",
+			"name": "cone"
+		}
+  ],
 	"surfaces": [
 		{
 			"type": "quad",
 			"transform": [
+        {
+          "scale": 555
+        },
 				{
 					"translate": [0, 0, -277.5]
 				}
 			],
-			"size": [555,555],
 			"material": "white"
 		},
 		{
 			"type": "quad",
 			"transform": [
+        {
+          "scale": 555
+        },
 				{
 					"axis": [1, 0, 0],
 					"angle": 90
@@ -81,6 +98,9 @@
 		{
 			"type": "quad",
 			"transform": [
+        {
+          "scale": 555
+        },
 				{
 					"axis": [1, 0, 0],
 					"angle": -90
@@ -89,12 +109,14 @@
 					"translate": [0, -277.5, 0]
 				}
 			],
-			"size": [555,555],
 			"material": "white"
 		},
 		{
 			"type": "quad",
 			"transform": [
+        {
+          "scale": 555
+        },
 				{
 					"axis": [0, 1, 0],
 					"angle": 90
@@ -103,12 +125,14 @@
 					"translate": [-277.5, 0, 0]
 				}
 			],
-			"size": [555,555],
 			"material": "green"
 		},
 		{
 			"type": "quad",
 			"transform": [
+        {
+          "scale": 555
+        },
 				{
 					"axis": [0, 1, 0],
 					"angle": -90
@@ -117,12 +141,14 @@
 					"translate": [277.5, 0, 0]
 				}
 			],
-			"size": [555,555],
 			"material": "red"
 		},
 		{
 			"type": "quad",
 			"transform": [
+        {
+          "scale": 530
+        },
 				{
 					"axis": [1, 0, 0],
 					"angle": 90
@@ -131,20 +157,25 @@
 					"translate": [0, 277, 0]
 				}
 			],
-			"size": [130,130],
 			"material": "light"
 		},
-		{
-			"type": "sphere",
-			"transform": { "translate": [140,-177.5,100] },
-			"radius": 100,
-			"material": "greensphere"
+    {
+			"type": "mesh",
+			"transform": [
+                { "scale": 100 },
+                { "translate": [140,-177.5,100]}
+            ],
+			"mesh": "cylinder",
+			"material": "white"
 		},
 		{
-			"type": "sphere",
-			"transform": { "translate": [-140,-177.5,-100] },
-			"radius": 100,
-			"material": "redsphere"
+			"type": "mesh",
+			"transform": [
+                { "scale": 100 },
+                { "translate": [-140,-177.5,-100] }
+            ],
+			"mesh": "cone",
+			"material": "white"
 		}
 	]
 }

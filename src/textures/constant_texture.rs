@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 use serde::Deserialize;
 
 use super::{Texture, TextureParameters};
@@ -10,8 +12,8 @@ pub struct ConstantTextureParameters {
 
 #[typetag::deserialize(name = "constant")]
 impl TextureParameters for ConstantTextureParameters {
-  fn build_texture(&self) -> Box<dyn Texture> {
-    Box::new(ConstantTexture::new(self.color.build_color()))
+  fn build_texture(&self) -> Rc<dyn Texture> {
+    Rc::new(ConstantTexture::new(self.color.build_color()))
   }
 }
 

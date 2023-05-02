@@ -1,4 +1,4 @@
-use std::fmt::Debug;
+use std::{fmt::Debug, rc::Rc};
 
 use crate::{light::*, math::*, raytracing::*, samplers::Sampler};
 
@@ -6,7 +6,7 @@ use crate::{light::*, math::*, raytracing::*, samplers::Sampler};
 pub trait MaterialParameters: Debug {
   fn name(&self) -> String;
 
-  fn build_material(&self) -> Box<dyn Material>;
+  fn build_material(&self) -> Rc<dyn Material>;
 }
 
 pub struct MaterialSample {

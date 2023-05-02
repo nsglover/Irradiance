@@ -35,6 +35,10 @@ where na::Const<D>: na::ToTypenum
   }
 }
 
+impl<S: Space<3>> Vector<3, S> {
+  pub fn cross(&self, other: &Self) -> Self { Self::from_raw(self.inner.cross(&other.inner)) }
+}
+
 impl<const D: usize, S: Space<D>> VectorLike<D, S> for Vector<D, S>
 where na::Const<D>: na::ToTypenum
 {

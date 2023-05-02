@@ -1,0 +1,88 @@
+{
+	"camera": {
+		"transform": {
+			"from": [0, 20, 1077.5],
+			"at": [0, -4, 0],
+			"up": [0, 1, 0]
+		},
+		"vfov": 40,
+		"fdist": 800,
+    "resolution": [512, 512]
+	},
+	"samples-per-pixel": 512,
+	"background": [0,0,0],
+	"accelerator":
+	{
+    "type": "bvh",
+    "strategy": "random",
+    "max-leaf-prims": 5
+	},
+  "integrator":
+  {
+    "type": "material-path-tracer",
+    "average-path-length": 256
+  },
+	"materials": [
+		{
+			"type": "lambertian",
+			"name": "white",
+			"albedo": {"type": "constant", "color": [0.73, 0.73, 0.73]}
+		},
+		{
+			"type": "lambertian",
+			"name": "red",
+			"albedo": {"type": "constant", "color": [0.65, 0.05, 0.05]}
+		},
+		{
+			"type": "lambertian",
+			"name": "green",
+			"albedo": {"type": "constant", "color": [0.12, 0.45, 0.15]}
+		},
+		{
+			"type": "diffuse light",
+			"name": "light",
+			"emit": {"type": "constant", "color": 1},
+      "intensity": 2.6
+		},
+		{
+			"type": "lambertian",
+			"name": "redsphere",
+			"albedo": {"type": "constant", "color": [0.75, 0.25, 0.25]}
+		},
+		{
+			"type": "lambertian",
+			"name": "greensphere",
+			"albedo": {"type": "constant", "color": [0.25, 0.75, 0.25]}
+		}
+	],
+  "meshes": [
+    {
+			"filename": "assets/cylinder.obj",
+      "name": "cylinder"
+		},
+		{
+			"filename": "assets/cone.obj",
+			"name": "cone"
+		}
+  ],
+	"surfaces": [
+    {
+			"type": "mesh",
+			"transform": [
+                { "scale": 100 },
+                { "translate": [140,-177.5,100]}
+            ],
+			"mesh": "cylinder",
+			"material": "white"
+		},
+		{
+			"type": "mesh",
+			"transform": [
+                { "scale": 100 },
+                { "translate": [-140,-177.5,-100] }
+            ],
+			"mesh": "cone",
+			"material": "white"
+		}
+	]
+}
