@@ -1,15 +1,16 @@
-use std::{error::Error, fmt::Debug, rc::Rc};
+use std::{error::Error, fmt::Debug, sync::Arc};
 
 use crate::{
-  light::*, materials::ReflectionType, raytracing::*, samplers::Sampler,
-  surface_groups::SurfaceGroup
+  light::*, math::PositiveReal, raytracing::*, sampling::Sampler, surface_groups::SurfaceGroup,
+  BuildSettings
 };
 
 #[typetag::deserialize(tag = "type")]
 pub trait IntegratorParameters: Debug {
   fn build_integrator(
     &self,
-    surfaces: Rc<dyn SurfaceGroup>
+    surfaces: Arc<dyn SurfaceGroup>,
+    settings: BuildSettings
   ) -> Result<Box<dyn Integrator + Sync + Send>, Box<dyn Error>>;
 }
 
@@ -23,12 +24,12 @@ pub trait Integrator: Send + Sync {
 pub trait PathTraceIntegrator {
   fn initial_path_terminator(&self, ray: WorldRay) -> PathTerminator;
 
-  /// Returns Ok((emitted, attenuation, scattered_ray, reflection_type)) or Err(background_light)
+  /// Returns Ok((emitted, attenuation, scattered_ray, maybe_pdf)) or Err(background_light)
   fn sample_scatter(
     &self,
     sampler: &mut dyn Sampler,
     ray: WorldRay
-  ) -> Result<(Color, Color, WorldRay, ReflectionType), Color>;
+  ) -> Result<(Color, Color, WorldRay, Option<PositiveReal>), Color>;
 }
 
 impl<T: PathTraceIntegrator + Send + Sync> Integrator for T {
@@ -39,11 +40,11 @@ impl<T: PathTraceIntegrator + Send + Sync> Integrator for T {
 
     while let Some((ray, survival_probability, cont)) = terminator.into_ray(sampler) {
       match self.sample_scatter(sampler, ray) {
-        Ok((emitted, attenuation, scattered_ray, reflection_type)) => {
+        Ok((emitted, attenuation, scattered_ray, maybe_pdf)) => {
           radiance += total_path_attenuation * emitted;
           total_path_attenuation *= attenuation / survival_probability;
-          if let ReflectionType::Diffuse(sample_pdf) = reflection_type {
-            total_path_attenuation /= sample_pdf;
+          if let Some(sample_pdf) = maybe_pdf {
+            total_path_attenuation /= sample_pdf.into_inner();
           }
 
           terminator = cont.into_terminator(scattered_ray);

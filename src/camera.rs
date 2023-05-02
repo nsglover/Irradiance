@@ -4,7 +4,7 @@ use crate::{
   common::Wrapper,
   math::*,
   raytracing::*,
-  samplers::{uniform_random_in_unit_disc, Sampler}
+  sampling::{uniform_random_in_unit_disc, Sampler}
 };
 
 fn default_resolution() -> (u32, u32) { (512, 512) }

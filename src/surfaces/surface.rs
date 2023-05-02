@@ -1,13 +1,13 @@
-use std::{collections::HashMap, fmt::Debug, rc::Rc};
+use std::{collections::HashMap, fmt::Debug, sync::Arc};
 
 use super::Mesh;
-use crate::{common::Wrapper, materials::Material, math::*, raytracing::*, samplers::Sampler};
+use crate::{common::Wrapper, materials::Material, math::*, raytracing::*, sampling::Sampler};
 
 #[typetag::deserialize(tag = "type")]
 pub trait SurfaceParameters: Debug {
   fn build_surfaces(
     &self,
-    materials: &HashMap<String, Rc<dyn Material>>,
+    materials: &HashMap<String, Arc<dyn Material>>,
     meshes: &HashMap<String, Mesh>
   ) -> Vec<Box<dyn Surface>>;
 }

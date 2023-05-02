@@ -1,5 +1,5 @@
 use super::*;
-use crate::{math::Real, samplers::Sampler};
+use crate::{math::Real, sampling::Sampler};
 
 pub struct PathContinuation {
   remaining_scatters: usize,

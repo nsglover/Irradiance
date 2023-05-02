@@ -52,10 +52,7 @@ impl<In: Space<3>, Middle: Space<3>, Out: Space<3>> Transform<In, Out>
 
   fn ray(&self, ray: &Ray3<In>) -> Ray3<Out> { self.translate.ray(&self.scale.ray(ray)) }
 
-  fn ray_intersect<'a>(
-    &self,
-    ray_intersection: &RayIntersection<'a, In>
-  ) -> RayIntersection<'a, Out> {
+  fn ray_intersect<'a>(&self, ray_intersection: &RayIntersection<In>) -> RayIntersection<Out> {
     self.translate.ray_intersect(&self.scale.ray_intersect(ray_intersection))
   }
 
@@ -81,8 +78,8 @@ impl<In: Space<3>, Middle: Space<3>, Out: Space<3>> Transform<In, Out>
 
   fn inverse_ray_intersect<'a>(
     &self,
-    ray_intersection: &RayIntersection<'a, Out>
-  ) -> RayIntersection<'a, In> {
+    ray_intersection: &RayIntersection<Out>
+  ) -> RayIntersection<In> {
     self.scale.inverse_ray_intersect(&self.translate.inverse_ray_intersect(ray_intersection))
   }
 }

@@ -1,4 +1,4 @@
-use std::rc::Rc;
+use std::sync::Arc;
 
 use serde::Deserialize;
 use tobj::LoadOptions;
@@ -18,7 +18,7 @@ pub struct MeshParameters {
 
 impl MeshParameters {
   pub fn build_mesh(self) -> (String, Mesh) {
-    println!("loading {}", self.filename);
+    println!("Loading mesh from \"{}\"", self.filename);
     let mut raw_mesh = tobj::load_obj(
       self.filename,
       &LoadOptions {
@@ -26,8 +26,7 @@ impl MeshParameters {
         triangulate: false,
         ignore_points: true,
         ignore_lines: true,
-        reorder_data: false,
-        merge_identical_points: true
+        reorder_data: false
       }
     )
     .expect("Mesh file not found!")
@@ -92,7 +91,7 @@ impl Mesh {
   pub fn to_triangles(
     &self,
     transform: LocalToWorld<MeshSpace>,
-    material: Rc<dyn Material>
+    material: Arc<dyn Material>
   ) -> Vec<TriangleSurface> {
     if self.indices.len() % 3 != 0 {
       panic!("Faces are not triangulated!")

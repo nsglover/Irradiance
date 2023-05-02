@@ -1,10 +1,10 @@
-use std::{collections::HashMap, rc::Rc};
+use std::{collections::HashMap, sync::Arc};
 
 use serde::Deserialize;
 
 use super::*;
 use crate::{
-  materials::Material, math::*, raytracing::*, samplers::Sampler, textures::TextureCoordinate
+  materials::Material, math::*, raytracing::*, sampling::Sampler, textures::TextureCoordinate
 };
 
 #[derive(Debug, Deserialize)]
@@ -18,7 +18,7 @@ pub struct TriangleSurfaceParameters {
 impl SurfaceParameters for TriangleSurfaceParameters {
   fn build_surfaces(
     &self,
-    materials: &HashMap<String, Rc<dyn Material>>,
+    materials: &HashMap<String, Arc<dyn Material>>,
     meshes: &HashMap<String, Mesh>
   ) -> Vec<Box<dyn Surface>> {
     meshes
@@ -45,7 +45,7 @@ pub struct TriangleSurface {
   edge2: WorldVector,
   true_normal: WorldUnitVector,
   bounding_box: WorldBoundingBox,
-  material: Rc<dyn Material>
+  material: Arc<dyn Material>
 }
 
 impl TriangleSurface {
@@ -53,7 +53,7 @@ impl TriangleSurface {
     v0 @ (p0, _, _): VertexInfo,
     v1 @ (p1, _, _): VertexInfo,
     v2 @ (p2, _, _): VertexInfo,
-    material: Rc<dyn Material>
+    material: Arc<dyn Material>
   ) -> Self {
     let mut bounding_box = WorldBoundingBox::default();
     bounding_box.enclose_point(&p0);
@@ -118,7 +118,7 @@ impl Surface for TriangleSurface {
 
       Some(WorldRayIntersection {
         ray,
-        surface: self,
+        material: self.material.clone(),
         intersect_time: t,
         intersect_point: p0 * bary[0] + (p1 * bary[1]).into() + (p2 * bary[2]).into(),
         geometric_normal,

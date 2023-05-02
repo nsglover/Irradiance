@@ -1,10 +1,10 @@
-use std::{fmt::Debug, rc::Rc};
+use std::{fmt::Debug, sync::Arc};
 
 use crate::{light::*, math::*, raytracing::WorldRayIntersection};
 
 #[typetag::deserialize(tag = "type")]
 pub trait TextureParameters: Debug {
-  fn build_texture(&self) -> Rc<dyn Texture>;
+  fn build_texture(&self) -> Arc<dyn Texture>;
 }
 
 #[derive(Debug, Clone, Copy)]

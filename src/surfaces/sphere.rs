@@ -1,9 +1,9 @@
-use std::{collections::HashMap, rc::Rc};
+use std::{collections::HashMap, sync::Arc};
 
 use serde::Deserialize;
 
 use super::*;
-use crate::{common::Wrapper, materials::Material, math::*, raytracing::*, samplers::Sampler};
+use crate::{common::Wrapper, materials::Material, math::*, raytracing::*, sampling::Sampler};
 
 #[derive(Debug, Deserialize)]
 pub struct SphereSurfaceParameters {
@@ -15,7 +15,7 @@ pub struct SphereSurfaceParameters {
 impl SurfaceParameters for SphereSurfaceParameters {
   fn build_surfaces(
     &self,
-    materials: &HashMap<String, Rc<dyn Material>>,
+    materials: &HashMap<String, Arc<dyn Material>>,
     _: &HashMap<String, Mesh>
   ) -> Vec<Box<dyn Surface>> {
     vec![Box::new(SphereSurface {
@@ -33,7 +33,7 @@ impl Space<3> for SphereSpace {}
 #[derive(Debug)]
 pub struct SphereSurface {
   transform: LocalToWorld<SphereSpace>,
-  material: Rc<dyn Material>
+  material: Arc<dyn Material>
 }
 
 impl TransformedSurface for SphereSurface {
@@ -89,7 +89,7 @@ impl TransformedSurface for SphereSurface {
 
     Some(RayIntersection {
       ray,
-      surface: self,
+      material: self.material.clone(),
       intersect_time: t,
       intersect_point: Point::from_vector(normalized_p.into_vector()),
       geometric_normal: normalized_p,

@@ -1,10 +1,11 @@
-use std::{fmt::Display, rc::Rc};
+use std::{fmt::Display, sync::Arc, time::Duration};
 
+use indicatif::{ProgressBar, ProgressDrawTarget, ProgressStyle};
 use rand::{distributions::Uniform, Rng};
 use serde_derive::Deserialize;
 
 use super::{surface_list::*, *};
-use crate::{math::*, raytracing::*, surfaces::Surface};
+use crate::{duration_to_hms, math::*, raytracing::*, surfaces::Surface, BuildSettings};
 
 #[derive(Debug, Clone, Copy, Deserialize)]
 pub enum PartitionStrategy {
@@ -28,9 +29,10 @@ pub struct BvhParameters {
 impl SurfaceGroupParameters for BvhParameters {
   fn build_surface_group(
     &self,
-    surfaces: Vec<Box<dyn Surface>>
-  ) -> Result<Rc<dyn SurfaceGroup>, Box<dyn std::error::Error>> {
-    Ok(Rc::new(BoundingVolumeHierarchy::build(surfaces, self)))
+    surfaces: Vec<Box<dyn Surface>>,
+    settings: BuildSettings
+  ) -> Result<Arc<dyn SurfaceGroup>, Box<dyn std::error::Error>> {
+    Ok(Arc::new(BoundingVolumeHierarchy::build(surfaces, self, settings)))
   }
 }
 
@@ -116,7 +118,11 @@ pub struct BoundingVolumeHierarchy {
 }
 
 impl BoundingVolumeHierarchy {
-  fn build_node(mut surfaces: Vec<Box<dyn Surface>>, params: &BvhParameters) -> Option<BvhNode> {
+  fn build_node(
+    mut surfaces: Vec<Box<dyn Surface>>,
+    params: &BvhParameters,
+    maybe_progress_bar: Option<ProgressBar>
+  ) -> Option<BvhNode> {
     let num_surfaces = surfaces.len();
     let bounding_boxes: Vec<_> = surfaces.iter().map(|s| s.world_bounding_box()).collect();
     let bounding_box = bounding_boxes.iter().fold(WorldBoundingBox::default(), |mut acc, bbox| {
@@ -124,10 +130,22 @@ impl BoundingVolumeHierarchy {
       acc
     });
 
+    let mut left_surfaces: Vec<Box<dyn Surface>>;
+    let mut right_surfaces: Vec<Box<dyn Surface>>;
     if num_surfaces <= params.max_leaf_primitives {
       if num_surfaces == 0 {
         None
       } else {
+        if let Some(progress_bar) = maybe_progress_bar {
+          progress_bar.inc(num_surfaces as u64);
+
+          let elapsed = progress_bar.elapsed().as_secs_f64();
+          let ratio = (progress_bar.length().unwrap() as f64) / (progress_bar.position() as f64);
+
+          let projected = Duration::from_secs_f64(elapsed * ratio);
+          progress_bar.set_message(duration_to_hms(&projected));
+        }
+
         Some(BvhNode { bounding_box, node_type: BvhNodeType::Leaf(SurfaceList::build(surfaces)) })
       }
     } else {
@@ -191,7 +209,7 @@ impl BoundingVolumeHierarchy {
           }
 
           let axis = split_axis.unwrap_or(0);
-          let (mut left_surfaces, mut right_surfaces): (Vec<_>, Vec<_>) = surfaces
+          (left_surfaces, right_surfaces) = surfaces
             .into_iter()
             .partition(|s| s.world_bounding_box().center()[axis] < split_boundary);
 
@@ -204,9 +222,6 @@ impl BoundingVolumeHierarchy {
             right_surfaces = left_iter.by_ref().take(num_surfaces / 2).collect();
             left_surfaces = left_iter.collect();
           }
-
-          left = Self::build_node(left_surfaces, params);
-          right = Self::build_node(right_surfaces, params);
         },
         PartitionStrategy::Random => {
           let axis = rand::thread_rng().sample(Uniform::new(0, 3));
@@ -219,13 +234,13 @@ impl BoundingVolumeHierarchy {
 
           let mut surfaces_iter = surfaces.into_iter();
 
-          let left_surfaces: Vec<_> = surfaces_iter.by_ref().take(num_left).collect();
-          let right_surfaces: Vec<_> = surfaces_iter.collect();
-
-          left = Self::build_node(left_surfaces, params);
-          right = Self::build_node(right_surfaces, params);
+          left_surfaces = surfaces_iter.by_ref().take(num_left).collect();
+          right_surfaces = surfaces_iter.collect();
         }
       };
+
+      left = Self::build_node(left_surfaces, params, maybe_progress_bar.clone());
+      right = Self::build_node(right_surfaces, params, maybe_progress_bar);
 
       Some(BvhNode {
         bounding_box,
@@ -234,8 +249,39 @@ impl BoundingVolumeHierarchy {
     }
   }
 
-  fn build(surfaces: Vec<Box<dyn Surface>>, params: &BvhParameters) -> Self {
-    Self { num_surfaces: surfaces.len(), root_node: Self::build_node(surfaces, params).unwrap() }
+  fn build(
+    surfaces: Vec<Box<dyn Surface>>,
+    params: &BvhParameters,
+    settings: BuildSettings
+  ) -> Self {
+    println!("Building BVH on {} surfaces...", surfaces.len());
+
+    // If enabled, start up the progress bar
+    let maybe_progress_bar = settings.use_progress_bar.then(|| {
+      let bar_style = "[ {elapsed_precise} / {msg} ]: {bar:50.blue/yellow} ".to_string()
+        + &format!("{{pos:>{}}}/{{len}} surfaces", (surfaces.len() as f64).log10().ceil() as usize);
+
+      let progress_bar = ProgressBar::with_draw_target(
+        Some(surfaces.len() as u64),
+        ProgressDrawTarget::stdout_with_hz(24)
+      );
+
+      let style = ProgressStyle::with_template(&bar_style).unwrap().progress_chars("##-");
+      progress_bar.set_style(style);
+      progress_bar.set_message(duration_to_hms(&Duration::from_nanos(0)));
+      progress_bar
+    });
+
+    let s = Self {
+      num_surfaces: surfaces.len(),
+      root_node: Self::build_node(surfaces, params, maybe_progress_bar.clone()).unwrap()
+    };
+
+    if let Some(progress_bar) = maybe_progress_bar {
+      progress_bar.finish();
+    }
+
+    s
   }
 }
 
@@ -251,7 +297,7 @@ impl SurfaceGroup for BoundingVolumeHierarchy {
   fn sample_and_pdf(
     &self,
     _point: &WorldPoint,
-    _sampler: &mut dyn crate::samplers::Sampler
+    _sampler: &mut dyn crate::sampling::Sampler
   ) -> (WorldUnitVector, Real) {
     todo!()
   }

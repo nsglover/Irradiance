@@ -1,9 +1,11 @@
-use std::rc::Rc;
+use std::sync::Arc;
 
 use serde::Deserialize;
 
 use super::*;
-use crate::{light::*, raytracing::*, samplers::Sampler, surface_groups::SurfaceGroup};
+use crate::{
+  light::*, raytracing::*, sampling::Sampler, surface_groups::SurfaceGroup, BuildSettings
+};
 
 #[derive(Debug, Deserialize)]
 pub struct NormalIntegratorParameters;
@@ -12,14 +14,15 @@ pub struct NormalIntegratorParameters;
 impl IntegratorParameters for NormalIntegratorParameters {
   fn build_integrator(
     &self,
-    surfaces: Rc<dyn SurfaceGroup>
+    surfaces: Arc<dyn SurfaceGroup>,
+    _: BuildSettings
   ) -> Result<Box<dyn Integrator + Sync + Send>, Box<dyn std::error::Error>> {
     Ok(Box::new(NormalIntegrator { surfaces }))
   }
 }
 
 struct NormalIntegrator {
-  surfaces: Rc<dyn SurfaceGroup>
+  surfaces: Arc<dyn SurfaceGroup>
 }
 
 impl Integrator for NormalIntegrator {

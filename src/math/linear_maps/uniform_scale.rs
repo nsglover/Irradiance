@@ -46,9 +46,9 @@ impl<In: Space<3>, Out: Space<3>> Transform<In, Out> for UniformScaleTransform<I
     Point::from_inner((point.inner.coords * self.scale).into())
   }
 
-  fn direction(&self, dir: &UnitVector3<In>) -> UnitVector3<Out> { dir.cast_unsafe() }
+  fn direction(&self, dir: &UnitVector3<In>) -> UnitVector3<Out> { dir.cast_unchecked() }
 
-  fn normal(&self, sn: &UnitVector3<In>) -> UnitVector3<Out> { sn.cast_unsafe() }
+  fn normal(&self, sn: &UnitVector3<In>) -> UnitVector3<Out> { sn.cast_unchecked() }
 
   fn ray(&self, ray: &Ray3<In>) -> Ray3<Out> {
     Ray3::new_with_time(
@@ -58,10 +58,7 @@ impl<In: Space<3>, Out: Space<3>> Transform<In, Out> for UniformScaleTransform<I
     )
   }
 
-  fn ray_intersect<'a>(
-    &self,
-    ray_intersection: &RayIntersection<'a, In>
-  ) -> RayIntersection<'a, Out> {
+  fn ray_intersect<'a>(&self, ray_intersection: &RayIntersection<In>) -> RayIntersection<Out> {
     let ray = &ray_intersection.ray;
     let transformed_ray = Ray3::new_with_time(
       ray.max_intersect_time() * PositiveReal::new_unchecked(self.scale),
@@ -71,7 +68,7 @@ impl<In: Space<3>, Out: Space<3>> Transform<In, Out> for UniformScaleTransform<I
 
     RayIntersection {
       ray: transformed_ray,
-      surface: ray_intersection.surface,
+      material: ray_intersection.material.clone(),
       intersect_time: ray_intersection.intersect_time * PositiveReal::new_unchecked(self.scale),
       intersect_point: self.point(&ray_intersection.intersect_point),
       geometric_normal: self.normal(&ray_intersection.geometric_normal),
@@ -88,9 +85,9 @@ impl<In: Space<3>, Out: Space<3>> Transform<In, Out> for UniformScaleTransform<I
     Point::from_inner((point.inner.coords * self.inverse_scale).into())
   }
 
-  fn inverse_direction(&self, dir: &UnitVector3<Out>) -> UnitVector3<In> { dir.cast_unsafe() }
+  fn inverse_direction(&self, dir: &UnitVector3<Out>) -> UnitVector3<In> { dir.cast_unchecked() }
 
-  fn inverse_normal(&self, sn: &UnitVector3<Out>) -> UnitVector3<In> { sn.cast_unsafe() }
+  fn inverse_normal(&self, sn: &UnitVector3<Out>) -> UnitVector3<In> { sn.cast_unchecked() }
 
   fn inverse_ray(&self, ray: &Ray3<Out>) -> Ray3<In> {
     Ray3::new_with_time(
@@ -102,8 +99,8 @@ impl<In: Space<3>, Out: Space<3>> Transform<In, Out> for UniformScaleTransform<I
 
   fn inverse_ray_intersect<'a>(
     &self,
-    ray_intersection: &RayIntersection<'a, Out>
-  ) -> RayIntersection<'a, In> {
+    ray_intersection: &RayIntersection<Out>
+  ) -> RayIntersection<In> {
     let ray = &ray_intersection.ray;
     let transformed_ray = Ray3::new_with_time(
       ray.max_intersect_time() * PositiveReal::new_unchecked(self.inverse_scale),
@@ -113,7 +110,7 @@ impl<In: Space<3>, Out: Space<3>> Transform<In, Out> for UniformScaleTransform<I
 
     RayIntersection {
       ray: transformed_ray,
-      surface: ray_intersection.surface,
+      material: ray_intersection.material.clone(),
       intersect_time: ray_intersection.intersect_time
         * PositiveReal::new_unchecked(self.inverse_scale),
       intersect_point: self.inverse_point(&ray_intersection.intersect_point),

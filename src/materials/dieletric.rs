@@ -1,9 +1,9 @@
-use std::rc::Rc;
+use std::sync::Arc;
 
 use serde::Deserialize;
 
 use super::*;
-use crate::{common::Wrapper, math::*, raytracing::*, samplers::*, textures::*};
+use crate::{common::Wrapper, light::Color, math::*, raytracing::*, sampling::*, textures::*};
 
 #[derive(Debug, Deserialize)]
 struct DieletricParameters {
@@ -16,37 +16,27 @@ struct DieletricParameters {
 impl MaterialParameters for DieletricParameters {
   fn name(&self) -> String { self.name.clone() }
 
-  fn build_material(&self) -> Rc<dyn Material> {
-    Rc::new(Dieletric { albedo: self.albedo.build_texture(), index_of_refraction: self.ior })
+  fn build_material(&self) -> Arc<dyn Material> {
+    Arc::new(Dieletric {
+      albedo: self.albedo.build_texture(),
+      scatter_random_var: ScatterRandomVariable::Specular(Box::new(RefractRandomVariable {
+        index_of_refraction: self.ior
+      }))
+    })
   }
 }
 
 #[derive(Debug)]
-pub struct Dieletric {
-  albedo: Rc<dyn Texture>,
+struct RefractRandomVariable {
   index_of_refraction: Real
 }
 
-// TODO: Document this and move it to math module
-fn refract<S: Space<3>>(
-  d: UnitVector3<S>,
-  normal: UnitVector3<S>,
-  ior_in_out_ratio: Real
-) -> Option<(UnitVector3<S>, Real)> {
-  let dt = d.dot(&normal);
-  let discriminant = 1.0 - ior_in_out_ratio * ior_in_out_ratio * (1.0 - dt * dt);
-  (discriminant > 0.0).then(|| {
-    let cos_theta_out = discriminant.sqrt();
-    let refracted_dir = (Vector::from(d.inner().into_inner() - normal.inner().into_inner() * dt)
-      * ior_in_out_ratio
-      - normal * cos_theta_out)
-      .normalize();
-    (refracted_dir, cos_theta_out)
-  })
-}
-
-impl Material for Dieletric {
-  fn sample(&self, hit: &WorldRayIntersection, sampler: &mut dyn Sampler) -> MaterialSample {
+impl DiscreteRandomVariable<WorldRayIntersection, WorldUnitVector> for RefractRandomVariable {
+  fn sample(
+    &self,
+    hit: &WorldRayIntersection,
+    sampler: &mut dyn Sampler
+  ) -> Option<WorldUnitVector> {
     let dir = hit.ray.dir();
 
     // Ensure normal and IOR are correctly oriented (i.e. for whether ray is entering or exiting)
@@ -78,10 +68,44 @@ impl Material for Dieletric {
       scattered_dir = reflected;
     }
 
-    MaterialSample::specular(self.albedo.value(hit), Ray::new(hit.intersect_point, scattered_dir))
+    Some(scattered_dir)
+  }
+}
+
+#[derive(Debug)]
+pub struct Dieletric {
+  albedo: Arc<dyn Texture>,
+  scatter_random_var: ScatterRandomVariable
+}
+
+// TODO: Document this and move it to math module
+fn refract<S: Space<3>>(
+  d: UnitVector3<S>,
+  normal: UnitVector3<S>,
+  ior_in_out_ratio: Real
+) -> Option<(UnitVector3<S>, Real)> {
+  let dt = d.dot(&normal);
+  let discriminant = 1.0 - ior_in_out_ratio * ior_in_out_ratio * (1.0 - dt * dt);
+  (discriminant > 0.0).then(|| {
+    let cos_theta_out = discriminant.sqrt();
+    let refracted_dir = (Vector::from(d.inner().into_inner() - normal.inner().into_inner() * dt)
+      * ior_in_out_ratio
+      - normal * cos_theta_out)
+      .normalize();
+    (refracted_dir, cos_theta_out)
+  })
+}
+
+impl Material for Dieletric {
+  fn emitted(&self, _: &WorldRayIntersection) -> Color { Color::black() }
+
+  fn bsdf(&self, hit: &WorldRayIntersection, _: &WorldUnitVector) -> Color {
+    self.albedo.value(hit)
+  }
+
+  fn scatter_random_variable(&self) -> Option<&ScatterRandomVariable> {
+    Some(&self.scatter_random_var)
   }
 
   fn is_emissive(&self) -> bool { false }
-
-  fn pdf(&self, _: &WorldRayIntersection, _: &WorldRay) -> Option<Real> { None }
 }

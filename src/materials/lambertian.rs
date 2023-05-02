@@ -1,9 +1,9 @@
-use std::rc::Rc;
+use std::sync::Arc;
 
 use serde::Deserialize;
 
 use super::*;
-use crate::{math::*, raytracing::*, samplers::*, textures::*};
+use crate::{light::Color, math::*, raytracing::*, sampling::*, textures::*};
 
 #[derive(Debug, Deserialize)]
 struct LambertianParameters {
@@ -15,33 +15,51 @@ struct LambertianParameters {
 impl MaterialParameters for LambertianParameters {
   fn name(&self) -> String { self.name.clone() }
 
-  fn build_material(&self) -> Rc<dyn Material> {
-    Rc::new(Lambertian { albedo: self.albedo.build_texture() })
+  fn build_material(&self) -> Arc<dyn Material> {
+    Arc::new(Lambertian {
+      albedo: self.albedo.build_texture(),
+      scatter_random_var: ScatterRandomVariable::Diffuse(Box::new(CosineWeightedHemisphere))
+    })
+  }
+}
+
+#[derive(Debug)]
+struct CosineWeightedHemisphere;
+
+impl ContinuousRandomVariable<WorldRayIntersection, WorldUnitVector> for CosineWeightedHemisphere {
+  fn sample_with_pdf(
+    &self,
+    param: &WorldRayIntersection,
+    sampler: &mut dyn Sampler
+  ) -> Option<(WorldUnitVector, PositiveReal)> {
+    let random: WorldVector = uniform_random_on_unit_sphere(sampler).into();
+    let normal: WorldVector = param.shading_normal.into();
+    let dir = (normal + random).normalize();
+    PositiveReal::new(dir.dot(&param.shading_normal) / PI).map(|pdf| (dir, pdf))
+  }
+
+  fn pdf(&self, param: &WorldRayIntersection, sample: &WorldUnitVector) -> Option<PositiveReal> {
+    let pdf = Real::max(0.0, sample.dot(&param.shading_normal) / PI);
+    PositiveReal::new(pdf)
   }
 }
 
 #[derive(Debug)]
 pub struct Lambertian {
-  albedo: Rc<dyn Texture>
+  albedo: Arc<dyn Texture>,
+  scatter_random_var: ScatterRandomVariable
 }
 
 impl Material for Lambertian {
-  fn sample(&self, hit: &WorldRayIntersection, sampler: &mut dyn Sampler) -> MaterialSample {
-    let random: WorldVector = uniform_random_on_unit_sphere(sampler).into();
-    let normal: WorldVector = hit.shading_normal.into();
-    let dir = (normal + random).normalize();
+  fn emitted(&self, _: &WorldRayIntersection) -> Color { Color::black() }
 
-    let pdf = Real::max(0.0, dir.dot(&hit.shading_normal) / PI);
-    let color = self.albedo.value(hit) * pdf;
-    let scattered_ray = WorldRay::new(hit.intersect_point, dir);
+  fn bsdf(&self, hit: &WorldRayIntersection, _: &WorldUnitVector) -> Color {
+    self.albedo.value(hit)
+  }
 
-    MaterialSample::diffuse(color, scattered_ray, pdf)
+  fn scatter_random_variable(&self) -> Option<&ScatterRandomVariable> {
+    Some(&self.scatter_random_var)
   }
 
   fn is_emissive(&self) -> bool { false }
-
-  fn pdf(&self, hit: &WorldRayIntersection, sample: &WorldRay) -> Option<Real> {
-    let pdf = Real::max(0.0, sample.dir().dot(&hit.shading_normal) / PI);
-    (pdf > 0.0).then_some(pdf)
-  }
 }

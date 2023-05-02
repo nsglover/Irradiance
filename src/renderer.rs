@@ -13,14 +13,15 @@ use threadpool::{Builder, ThreadPool};
 
 use crate::{
   camera::*,
+  duration_to_hms,
   integrators::*,
   light::*,
   materials::MaterialParameters,
   math::*,
-  samplers::*,
+  sampling::*,
   surface_groups::SurfaceGroupParameters,
   surfaces::{MeshParameters, SurfaceParameters},
-  RenderSettings
+  BuildSettings, RenderSettings
 };
 
 #[derive(Debug, Deserialize)]
@@ -60,7 +61,10 @@ pub struct Renderer {
 type Image = ImageBuffer<Rgb<u8>, Vec<u8>>;
 
 impl Renderer {
-  pub fn build_from_json(json: serde_json::Value) -> Result<Renderer, Box<dyn Error>> {
+  pub fn build_from_json(
+    json: serde_json::Value,
+    settings: BuildSettings
+  ) -> Result<Renderer, Box<dyn Error>> {
     // TODO: Add a progress bar for this building step
     let SceneParameters {
       samples_per_pixel,
@@ -75,10 +79,11 @@ impl Renderer {
     let materials = material_params.into_iter().map(|p| (p.name(), p.build_material())).collect();
     let meshes = mesh_params.into_iter().map(|p| p.build_mesh()).collect();
     let surface_group = surface_group_params.build_surface_group(
-      surface_params.into_iter().flat_map(|p| p.build_surfaces(&materials, &meshes)).collect()
+      surface_params.into_iter().flat_map(|p| p.build_surfaces(&materials, &meshes)).collect(),
+      settings
     )?;
 
-    let integrator = integrator_params.build_integrator(surface_group)?;
+    let integrator = integrator_params.build_integrator(surface_group, settings)?;
     Ok(Self { samples_per_pixel, camera: camera_params.build_camera(), integrator })
   }
 
@@ -122,21 +127,19 @@ impl Renderer {
       }
     }
 
-    // Make the progress bar style
-    let offset = (num_subimages as f64).log10().ceil() as usize;
-    let main_bar_style = format!(
-      "[ {{elapsed_precise}} / {{msg}} ]: {{bar:50.green/red}} {{pos:>{offset}}}/{num_subimages} subimages"
-    );
-
     // If enabled, start up the progress bar
     let maybe_progress_bar = settings.use_progress_bar.then(|| {
+      let bar_style = "[ {elapsed_precise} / {msg} ]: {bar:50.green/red} ".to_string()
+        + &format!("{{pos:>{}}}/{{len}} subimages", (num_subimages as f64).log10().ceil() as usize);
+
       let progress_bar = ProgressBar::with_draw_target(
         Some(num_subimages as u64),
         ProgressDrawTarget::stdout_with_hz(24)
       );
 
-      let style = ProgressStyle::with_template(&main_bar_style).unwrap().progress_chars("##-");
+      let style = ProgressStyle::with_template(&bar_style).unwrap().progress_chars("##-");
       progress_bar.set_style(style);
+      progress_bar.set_message(duration_to_hms(&Duration::from_nanos(0)));
       progress_bar
     });
 
@@ -151,14 +154,6 @@ impl Renderer {
         &image_lock,
         subimage_window
       );
-    }
-
-    // A helper to display durations
-    fn duration_to_string(d: Duration) -> String {
-      let seconds = d.as_secs() % 60;
-      let minutes = (d.as_secs() / 60) % 60;
-      let hours = (d.as_secs() / 60) / 60;
-      format!("{:0>2}:{:0>2}:{:0>2}", hours, minutes, seconds)
     }
 
     // Manually update the progress bar as the threads run.
@@ -176,7 +171,7 @@ impl Renderer {
         };
 
         let projected = Duration::from_secs_f64(elapsed * ratio);
-        progress_bar.set_message(duration_to_string(projected));
+        progress_bar.set_message(duration_to_hms(&projected));
 
         thread::sleep(Duration::from_millis(250));
         if num_incomplete == 0 {
@@ -188,12 +183,12 @@ impl Renderer {
     // Wait for the threads to finish and mark the overall progress bar as finished.
     thread_pool.join();
     if let Some(progress_bar) = maybe_progress_bar {
-      progress_bar.set_message(duration_to_string(progress_bar.elapsed()));
+      progress_bar.set_message(duration_to_hms(&progress_bar.elapsed()));
       progress_bar.finish();
     }
 
     // Return the resulting image.
-    Arc::into_inner(image_lock).unwrap().into_inner().unwrap().into()
+    Arc::try_unwrap(image_lock).unwrap().into_inner().unwrap().into()
   }
 
   fn async_integrate_subimage(

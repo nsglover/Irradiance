@@ -1,18 +1,20 @@
-use std::{error::Error, fmt::Debug, rc::Rc};
+use std::{error::Error, fmt::Debug, sync::Arc};
 
 use crate::{
   math::{Real, WorldPoint, WorldUnitVector},
   raytracing::*,
-  samplers::Sampler,
-  surfaces::Surface
+  sampling::Sampler,
+  surfaces::Surface,
+  BuildSettings
 };
 
 #[typetag::deserialize(tag = "type")]
 pub trait SurfaceGroupParameters: Debug {
   fn build_surface_group(
     &self,
-    surfaces: Vec<Box<dyn Surface>>
-  ) -> Result<Rc<dyn SurfaceGroup>, Box<dyn Error>>;
+    surfaces: Vec<Box<dyn Surface>>,
+    settings: BuildSettings
+  ) -> Result<Arc<dyn SurfaceGroup>, Box<dyn Error>>;
 }
 
 pub trait SurfaceGroup: Debug {

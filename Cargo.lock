@@ -781,6 +781,7 @@ dependencies = [
  "indicatif",
  "kd-tree",
  "nalgebra 0.32.2",
+ "ordered-float",
  "rand",
  "serde",
  "serde_derive",

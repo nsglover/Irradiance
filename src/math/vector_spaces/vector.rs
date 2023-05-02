@@ -17,7 +17,7 @@ where na::Const<D>: na::ToTypenum
 impl<const D: usize, S: Space<D>> Vector<D, S>
 where na::Const<D>: na::ToTypenum
 {
-  pub fn cast_unsafe<T: Space<D>>(self) -> Vector<D, T> { Vector::from_raw(self.inner) }
+  pub fn cast_unchecked<T: Space<D>>(self) -> Vector<D, T> { Vector::from_raw(self.inner) }
 
   pub fn zero() -> Self { na::SVector::<Real, D>::zeros().into() }
 

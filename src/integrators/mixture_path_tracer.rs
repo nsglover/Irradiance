@@ -1,11 +1,11 @@
-use {
-  super::*,
-  crate::{
-    integrators::IntegratorParameters, light::Color, materials::ReflectionType, math::Float,
-    raytracing::*, samplers::Sampler, surface_groups::SurfaceGroup
-  },
-  serde::Deserialize,
-  std::rc::Rc
+use std::sync::Arc;
+
+use serde::Deserialize;
+
+use super::*;
+use crate::{
+  integrators::IntegratorParameters, light::Color, materials::ReflectionType, math::Float,
+  raytracing::*, samplers::Sampler, surface_groups::SurfaceGroup
 };
 
 // TODO: Add background to this
@@ -19,7 +19,7 @@ struct Parameters {
 impl IntegratorParameters for Parameters {
   fn build_integrator(
     &self,
-    surfaces: Rc<dyn SurfaceGroup>
+    surfaces: Arc<dyn SurfaceGroup>
   ) -> Result<Box<dyn Integrator + Sync + Send>, Box<dyn std::error::Error>> {
     Ok(Box::new(MixturePathTracer {
       surfaces,
@@ -30,7 +30,7 @@ impl IntegratorParameters for Parameters {
 }
 
 pub struct MixturePathTracer {
-  surfaces: Rc<dyn SurfaceGroup>,
+  surfaces: Arc<dyn SurfaceGroup>,
   path_termination_probability: Float,
   background: Color
 }

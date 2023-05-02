@@ -1,9 +1,9 @@
-use std::rc::Rc;
+use std::sync::Arc;
 
 use serde::Deserialize;
 
 use super::*;
-use crate::{math::Real, raytracing::*, samplers::*, textures::*};
+use crate::{light::Color, math::WorldUnitVector, raytracing::*, sampling::*, textures::*};
 
 #[derive(Debug, Deserialize)]
 struct MirrorParameters {
@@ -15,23 +15,39 @@ struct MirrorParameters {
 impl MaterialParameters for MirrorParameters {
   fn name(&self) -> String { self.name.clone() }
 
-  fn build_material(&self) -> Rc<dyn Material> {
-    Rc::new(Mirror { albedo: self.albedo.build_texture() })
+  fn build_material(&self) -> Arc<dyn Material> {
+    Arc::new(Mirror {
+      albedo: self.albedo.build_texture(),
+      scatter_random_var: ScatterRandomVariable::Specular(Box::new(ReflectRandomVariable))
+    })
+  }
+}
+
+#[derive(Debug)]
+struct ReflectRandomVariable;
+
+impl DiscreteRandomVariable<WorldRayIntersection, WorldUnitVector> for ReflectRandomVariable {
+  fn sample(&self, param: &WorldRayIntersection, _: &mut dyn Sampler) -> Option<WorldUnitVector> {
+    Some((-param.ray.dir()).reflect_about(param.shading_normal))
   }
 }
 
 #[derive(Debug)]
 pub struct Mirror {
-  albedo: Rc<dyn Texture>
+  albedo: Arc<dyn Texture>,
+  scatter_random_var: ScatterRandomVariable
 }
 
 impl Material for Mirror {
-  fn sample(&self, hit: &WorldRayIntersection, _: &mut dyn Sampler) -> MaterialSample {
-    let ray = Ray::new(hit.intersect_point, (-hit.ray.dir()).reflect_about(hit.shading_normal));
-    MaterialSample::specular(self.albedo.value(hit), ray)
+  fn emitted(&self, _: &WorldRayIntersection) -> Color { Color::black() }
+
+  fn bsdf(&self, hit: &WorldRayIntersection, _: &WorldUnitVector) -> Color {
+    self.albedo.value(hit)
+  }
+
+  fn scatter_random_variable(&self) -> Option<&ScatterRandomVariable> {
+    Some(&self.scatter_random_var)
   }
 
   fn is_emissive(&self) -> bool { false }
-
-  fn pdf(&self, _: &WorldRayIntersection, _: &WorldRay) -> Option<Real> { None }
 }

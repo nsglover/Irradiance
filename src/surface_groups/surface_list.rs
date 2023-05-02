@@ -1,9 +1,9 @@
-use std::rc::Rc;
+use std::sync::Arc;
 
 use serde::Deserialize;
 
 use super::*;
-use crate::{math::*, raytracing::*, samplers::Sampler, surfaces::Surface};
+use crate::{math::*, raytracing::*, sampling::Sampler, surfaces::Surface, BuildSettings};
 
 #[derive(Debug, Deserialize)]
 pub struct SurfaceListParameters {}
@@ -12,9 +12,10 @@ pub struct SurfaceListParameters {}
 impl SurfaceGroupParameters for SurfaceListParameters {
   fn build_surface_group(
     &self,
-    surfaces: Vec<Box<dyn Surface>>
-  ) -> Result<Rc<dyn SurfaceGroup>, Box<dyn std::error::Error>> {
-    Ok(Rc::new(SurfaceList::build(surfaces)))
+    surfaces: Vec<Box<dyn Surface>>,
+    _: BuildSettings
+  ) -> Result<Arc<dyn SurfaceGroup>, Box<dyn std::error::Error>> {
+    Ok(Arc::new(SurfaceList::build(surfaces)))
   }
 }
 

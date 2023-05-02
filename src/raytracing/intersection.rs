@@ -1,10 +1,12 @@
+use std::sync::Arc;
+
 use super::*;
-use crate::{math::*, surfaces::Surface, textures::TextureCoordinate};
+use crate::{materials::Material, math::*, textures::TextureCoordinate};
 
 #[derive(Debug, Clone)]
-pub struct RayIntersection<'a, S: Space<3>> {
+pub struct RayIntersection<S: Space<3>> {
   pub ray: Ray3<S>,
-  pub surface: &'a dyn Surface,
+  pub material: Arc<dyn Material>,
   pub intersect_time: PositiveReal,
   pub intersect_point: Point3<S>,
   pub geometric_normal: UnitVector3<S>,
@@ -12,18 +14,18 @@ pub struct RayIntersection<'a, S: Space<3>> {
   pub tex_coords: TextureCoordinate
 }
 
-impl<'a, S: Space<3>> RayIntersection<'a, S> {
-  pub fn cast_unsafe<T: Space<3>>(&self) -> RayIntersection<'a, T> {
+impl<S: Space<3>> RayIntersection<S> {
+  pub fn cast_unchecked<T: Space<3>>(&self) -> RayIntersection<T> {
     RayIntersection {
-      ray: self.ray.cast_unsafe(),
-      surface: self.surface,
+      ray: self.ray.cast_unchecked(),
+      material: self.material.clone(),
       intersect_time: self.intersect_time,
-      intersect_point: self.intersect_point.cast_unsafe(),
-      geometric_normal: self.geometric_normal.cast_unsafe(),
-      shading_normal: self.shading_normal.cast_unsafe(),
+      intersect_point: self.intersect_point.cast_unchecked(),
+      geometric_normal: self.geometric_normal.cast_unchecked(),
+      shading_normal: self.shading_normal.cast_unchecked(),
       tex_coords: self.tex_coords
     }
   }
 }
 
-pub type WorldRayIntersection<'a> = RayIntersection<'a, WorldSpace>;
+pub type WorldRayIntersection = RayIntersection<WorldSpace>;

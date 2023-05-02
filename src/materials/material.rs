@@ -1,61 +1,31 @@
-use std::{fmt::Debug, rc::Rc};
+use std::{fmt::Debug, sync::Arc};
 
-use crate::{light::*, math::*, raytracing::*, samplers::Sampler};
+use crate::{
+  light::*,
+  math::*,
+  raytracing::*,
+  sampling::{ContinuousRandomVariable, DiscreteRandomVariable}
+};
 
 #[typetag::deserialize(tag = "type")]
 pub trait MaterialParameters: Debug {
   fn name(&self) -> String;
 
-  fn build_material(&self) -> Rc<dyn Material>;
+  fn build_material(&self) -> Arc<dyn Material>;
 }
 
-pub struct MaterialSample {
-  pub emission: Option<Color>,
-  pub reflection: Option<(Color, WorldRay, ReflectionType)>
-}
-
-impl MaterialSample {
-  pub fn nothing() -> Self { Self { emission: None, reflection: None } }
-
-  pub fn emission(color: Color) -> Self { Self { emission: Some(color), reflection: None } }
-
-  pub fn diffuse(attenuation: Color, scattered_ray: WorldRay, sample_pdf: Real) -> Self {
-    if sample_pdf == 0.0 {
-      Self::nothing()
-    } else {
-      Self {
-        emission: None,
-        reflection: Some((attenuation, scattered_ray, ReflectionType::Diffuse(sample_pdf)))
-      }
-    }
-  }
-
-  pub fn specular(attenuation: Color, scattered_ray: WorldRay) -> Self {
-    Self {
-      emission: None,
-      reflection: Some((attenuation, scattered_ray, ReflectionType::Specular))
-    }
-  }
-
-  pub fn scattered_ray(&self) -> Option<&WorldRay> {
-    self.reflection.as_ref().map(|(_, ray, _)| ray)
-  }
-}
-
-pub enum ReflectionType {
-  /// Specular
-  Specular,
-
-  // Diffuse(PDF evaluated at the sampled reflection, PDF for for the entire random variable)
-  Diffuse(Real)
+#[derive(Debug)]
+pub enum ScatterRandomVariable {
+  Diffuse(Box<dyn ContinuousRandomVariable<WorldRayIntersection, WorldUnitVector>>),
+  Specular(Box<dyn DiscreteRandomVariable<WorldRayIntersection, WorldUnitVector>>)
 }
 
 pub trait Material: Debug {
-  // fn bsdf(&self, hit: &WorldRayIntersection, scattered_dir: &WorldDirection) -> Color;
+  fn emitted(&self, hit: &WorldRayIntersection) -> Color;
 
-  fn sample(&self, hit: &WorldRayIntersection, sampler: &mut dyn Sampler) -> MaterialSample;
+  fn bsdf(&self, hit: &WorldRayIntersection, scattered_dir: &WorldUnitVector) -> Color;
 
-  fn pdf(&self, hit: &WorldRayIntersection, scattered_ray: &WorldRay) -> Option<Real>;
+  fn scatter_random_variable(&self) -> Option<&ScatterRandomVariable>;
 
   fn is_emissive(&self) -> bool;
 }

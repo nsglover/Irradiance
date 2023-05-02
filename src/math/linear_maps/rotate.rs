@@ -63,17 +63,14 @@ impl<In: Space<3>, Out: Space<3>> Transform<In, Out> for RotateTransform<In, Out
     )
   }
 
-  fn ray_intersect<'a>(
-    &self,
-    ray_intersection: &RayIntersection<'a, In>
-  ) -> RayIntersection<'a, Out> {
+  fn ray_intersect<'a>(&self, ray_intersection: &RayIntersection<In>) -> RayIntersection<Out> {
     RayIntersection {
       ray: Ray3::new_with_time(
         ray_intersection.ray.max_intersect_time(),
         self.point(&ray_intersection.ray.origin()),
         self.direction(&ray_intersection.ray.dir())
       ),
-      surface: ray_intersection.surface,
+      material: ray_intersection.material.clone(),
       intersect_time: ray_intersection.intersect_time,
       intersect_point: self.point(&ray_intersection.intersect_point),
       geometric_normal: self.normal(&ray_intersection.geometric_normal),
@@ -108,15 +105,15 @@ impl<In: Space<3>, Out: Space<3>> Transform<In, Out> for RotateTransform<In, Out
 
   fn inverse_ray_intersect<'a>(
     &self,
-    ray_intersection: &RayIntersection<'a, Out>
-  ) -> RayIntersection<'a, In> {
+    ray_intersection: &RayIntersection<Out>
+  ) -> RayIntersection<In> {
     RayIntersection {
       ray: Ray3::new_with_time(
         ray_intersection.ray.max_intersect_time(),
         self.inverse_point(&ray_intersection.ray.origin()),
         self.inverse_direction(&ray_intersection.ray.dir())
       ),
-      surface: ray_intersection.surface,
+      material: ray_intersection.material.clone(),
       intersect_time: ray_intersection.intersect_time,
       intersect_point: self.inverse_point(&ray_intersection.intersect_point),
       geometric_normal: self.inverse_normal(&ray_intersection.geometric_normal),

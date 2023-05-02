@@ -12,10 +12,11 @@ image = "0.24.6"
 indicatif = "0.17.3"
 kd-tree = { version = "0.5.1", features = ["nalgebra", "nalgebra-serde", "rayon", "serde"] }
 nalgebra = "0.32.2"
+ordered-float = "3.7.0"
 rand = "0.8.5"
 serde = "1.0.159"
 serde_derive = "1.0.159"
 serde_json = "1.0.95"
 threadpool = "1.8.1"
-tobj = { version = "3.2.5", features = ["use_f64", "reordering", "merging"] }
+tobj = { version = "3.2.5", features = ["use_f64", "reordering"] }
 typetag = "0.2.7"

@@ -17,7 +17,7 @@ where Const<D>: ToTypenum
 impl<const D: usize, S: Space<D>> UnitVector<D, S>
 where Const<D>: ToTypenum
 {
-  pub fn cast_unsafe<T: Space<D>>(self) -> UnitVector<D, T> {
+  pub fn cast_unchecked<T: Space<D>>(self) -> UnitVector<D, T> {
     UnitVector { inner: self.inner, _phantom: Phantom::default() }
   }
 

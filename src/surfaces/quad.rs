@@ -1,11 +1,11 @@
-use std::{collections::HashMap, rc::Rc};
+use std::{collections::HashMap, sync::Arc};
 
 use nalgebra as na;
 use serde::Deserialize;
 
 use super::*;
 use crate::{
-  common::Wrapper, materials::Material, math::*, raytracing::*, samplers::Sampler,
+  common::Wrapper, materials::Material, math::*, raytracing::*, sampling::Sampler,
   textures::TextureCoordinate
 };
 
@@ -19,7 +19,7 @@ pub struct QuadSurfaceParameters {
 impl SurfaceParameters for QuadSurfaceParameters {
   fn build_surfaces(
     &self,
-    materials: &HashMap<String, Rc<dyn Material>>,
+    materials: &HashMap<String, Arc<dyn Material>>,
     _: &HashMap<String, Mesh>
   ) -> Vec<Box<dyn Surface>> {
     vec![Box::new(QuadSurface {
@@ -38,7 +38,7 @@ impl Space<3> for QuadSpace {}
 #[derive(Debug)]
 pub struct QuadSurface {
   transform: LocalToWorld<QuadSpace>,
-  material: Rc<dyn Material>,
+  material: Arc<dyn Material>,
   normal: UnitVector3<<Self as TransformedSurface>::LocalSpace>
 }
 
@@ -75,7 +75,7 @@ impl TransformedSurface for QuadSurface {
       let tex_coords = TextureCoordinate::from(na::vector![p.x + 0.5, p.y + 0.5]);
       Some(RayIntersection {
         ray,
-        surface: self,
+        material: self.material.clone(),
         intersect_time: t,
         intersect_point: p.into(),
         geometric_normal: normal,
