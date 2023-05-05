@@ -9,7 +9,7 @@
 		"fdist": 800,
     "resolution": [1024, 1024]
 	},
-	"samples-per-pixel": 128,
+	"samples-per-pixel": 64,
 	"background": [0,0,0],
   "_integrator":
   {
@@ -23,6 +23,12 @@
     "average-path-length": 256,
     "radiance-estimate-photons": 64
   },
+  "meshes": [
+    {
+			"filename": "assets/lumpy-glass.obj",
+      "name": "fancy-glass"
+		}
+  ],
 	"materials": [
 		{
 			"type": "lambertian",
@@ -40,10 +46,15 @@
 			"albedo": {"type": "constant", "color": [0.12, 0.45, 0.15]}
 		},
 		{
+			"type": "lambertian",
+			"name": "blue",
+			"albedo": {"type": "constant", "color": [0.12, 0.15, 0.45]}
+		},
+		{
 			"type": "diffuse light",
 			"name": "light",
 			"emit": {"type": "constant", "color": 1},
-      "intensity": 15
+      "intensity": 25
 		},
 		{
 			"type": "mirror",
@@ -57,13 +68,8 @@
       "ior": 1.5
 		}
 	],
-  "meshes": [
-    {
-			"filename": "assets/dragon.obj",
-      "name": "dragon"
-		}
-  ],
 	"surfaces": [
+		
 		{
 			"type": "quad",
 			"transform": [
@@ -74,7 +80,7 @@
 					"translate": [0, 0, -277.5]
 				}
 			],
-			"material": "white"
+			"material": "blue"
 		},
 		{
 			"type": "quad",
@@ -157,23 +163,23 @@
 			],
 			"material": "light"
 		},
-    {
-			"type": "mesh",
-			"transform": [
-                { "scale": 100 },
-                { "translate": [140,-177.5,100]}
-            ],
-			"mesh": "dragon",
-			"material": "metal"
-		},
 		{
 			"type": "mesh",
 			"transform": [
-                { "scale": 100 },
-                { "translate": [-140,-177.5,-100] }
+                { "scale": [75, -75, 75] },
+                { "translate": [400,0,-50] }
             ],
-			"mesh": "dragon",
+			"mesh": "fancy-glass",
 			"material": "glass"
+		},
+		{
+			"type": "sphere",
+			"transform": [
+        { "scale": 100 },
+        { "translate": [-140,-177.5,-100] }
+      ],
+			"radius": 100,
+			"material": "metal"
 		}
 	]
 }

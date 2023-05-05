@@ -1,5 +1,8 @@
 use super::*;
-use crate::{math::Real, sampling::Sampler};
+use crate::{
+  math::{PositiveReal, Real},
+  sampling::Sampler
+};
 
 pub struct PathContinuation {
   remaining_scatters: usize,
@@ -22,7 +25,7 @@ pub struct PathTerminator {
 }
 
 impl PathTerminator {
-  pub fn new(ray: WorldRay, termination_probability: Real) -> Self {
+  pub fn new(ray: WorldRay, termination_probability: PositiveReal) -> Self {
     Self {
       ray,
       cont: PathContinuation {

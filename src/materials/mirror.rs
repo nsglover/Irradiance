@@ -42,12 +42,21 @@ impl Material for Mirror {
   fn emitted(&self, _: &WorldRayIntersection) -> Option<Color> { None }
 
   fn bsdf(&self, hit: &WorldRayIntersection, _: &WorldUnitVector) -> Color {
-    self.albedo.value(hit)
+    self.albedo.value(&hit.tex_coords)
   }
 
   fn scatter_random_variable(&self) -> Option<&ScatterRandomVariable> {
     Some(&self.scatter_random_var)
   }
 
-  fn is_emissive(&self) -> bool { false }
+  fn emit_random_variable(
+    &self
+  ) -> Option<
+    &dyn ContinuousRandomVariable<
+      (crate::math::WorldPoint, WorldUnitVector),
+      (WorldUnitVector, Color)
+    >
+  > {
+    None
+  }
 }

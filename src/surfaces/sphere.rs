@@ -3,7 +3,15 @@ use std::{collections::HashMap, sync::Arc};
 use serde::Deserialize;
 
 use super::*;
-use crate::{common::Wrapper, materials::Material, math::*, raytracing::*, BuildSettings};
+use crate::{
+  common::Wrapper,
+  light::Color,
+  materials::Material,
+  math::*,
+  raytracing::*,
+  sampling::{uniform_random_on_unit_sphere, ContinuousRandomVariable, Sampler},
+  BuildSettings
+};
 
 #[derive(Debug, Deserialize)]
 pub struct SphereSurfaceParameters {
@@ -19,14 +27,19 @@ impl SurfaceParameters for SphereSurfaceParameters {
     _: &HashMap<String, Mesh>,
     _: BuildSettings
   ) -> Box<dyn Surface> {
+    let t = self.transform.clone().build_transform();
+    let r = PositiveReal::new_unchecked(t.vector(&Vector::from_array([1.0, 0.0, 0.0])).norm());
     Box::new(SphereSurface {
-      transform: self.transform.clone().build_transform(),
+      transformed_radius: r,
+      transformed_center: t.point(&Point::origin()),
+      inverse_transformed_area: PositiveReal::new_unchecked(1.0 / (4.0 * PI * r * r)),
+      transform: t,
       material: materials.get(&self.material).unwrap().clone()
     })
   }
 
   fn is_emissive(&self, materials: &HashMap<String, Arc<dyn Material>>) -> bool {
-    materials.get(&self.material).unwrap().is_emissive()
+    materials.get(&self.material).unwrap().emit_random_variable().is_some()
   }
 }
 
@@ -38,7 +51,48 @@ impl Space<3> for SphereSpace {}
 #[derive(Debug)]
 pub struct SphereSurface {
   transform: LocalToWorld<SphereSpace>,
+  transformed_radius: PositiveReal,
+  inverse_transformed_area: PositiveReal,
+  transformed_center: WorldPoint,
   material: Arc<dyn Material>
+}
+
+impl ContinuousRandomVariable<(), (WorldRay, Color)> for SphereSurface {
+  fn sample_with_pdf(
+    &self,
+    _: &(),
+    sampler: &mut dyn Sampler
+  ) -> Option<((WorldRay, Color), PositiveReal)> {
+    self
+      .material
+      .emit_random_variable()
+      .map(|rv| {
+        let normal = uniform_random_on_unit_sphere(sampler);
+        let point = self.transformed_center + normal * self.transformed_radius.into_inner();
+
+        rv.sample_with_pdf(&(point, normal), sampler).map(|((dir, light), pdf)| {
+          (
+            (Ray::new(point, dir), light * dir.dot(&normal).abs()),
+            pdf * self.inverse_transformed_area
+          )
+        })
+      })
+      .flatten()
+  }
+
+  fn pdf(&self, _: &(), sample: &(WorldRay, Color)) -> Option<PositiveReal> {
+    self
+      .material
+      .emit_random_variable()
+      .map(|rv| {
+        rv.pdf(
+          &(sample.0.origin(), (sample.0.origin() - self.transformed_center).normalize()),
+          &(sample.0.dir(), sample.1)
+        )
+        .map(|p| p * self.inverse_transformed_area)
+      })
+      .flatten()
+  }
 }
 
 impl TransformedSurface for SphereSurface {
@@ -97,12 +151,18 @@ impl TransformedSurface for SphereSurface {
     ))
   }
 
+  fn emitted_ray_random_variable(&self) -> &dyn ContinuousRandomVariable<(), (WorldRay, Color)> {
+    self
+  }
+
   fn local_bounding_box(&self) -> BoundingBox3<Self::LocalSpace> {
     BoundingBox3::new(
       nalgebra::point![-1.0, -1.0, -1.0].into(),
       nalgebra::point![1.0, 1.0, 1.0].into()
     )
   }
+
+  fn num_subsurfaces(&self) -> usize { 1 }
 
   // fn intersecting_direction_sample(
   //   &self,

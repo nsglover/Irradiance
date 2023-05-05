@@ -2,8 +2,8 @@ use std::sync::Arc;
 
 use serde::Deserialize;
 
-use super::{Texture, TextureParameters};
-use crate::{light::*, raytracing::*};
+use super::{Texture, TextureCoordinate, TextureParameters};
+use crate::light::*;
 
 #[derive(Debug, Clone, Copy, Deserialize)]
 pub struct ConstantTextureParameters {
@@ -27,5 +27,5 @@ impl ConstantTexture {
 }
 
 impl Texture for ConstantTexture {
-  fn value(&self, _: &WorldRayIntersection) -> Color { self.color }
+  fn value(&self, _: &TextureCoordinate) -> Color { self.color }
 }

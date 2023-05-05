@@ -47,7 +47,7 @@ struct SceneParameters {
 pub struct Renderer {
   samples_per_pixel: usize,
   camera: Camera,
-  integrator: Box<dyn Integrator>
+  integrators: Vec<Box<dyn Integrator>>
 }
 
 type Image = ImageBuffer<Rgb<u8>, Vec<u8>>;
@@ -85,10 +85,10 @@ impl Renderer {
     let scene = Scene::new(non_emissive_surface, emissive_surface);
 
     // Build integrator from scene
-    let integrator = integrator_params.build_integrator(scene, settings)?;
+    let integrators = integrator_params.build_integrators(scene, settings)?;
 
     // Return the scene with its camera
-    Ok(Self { samples_per_pixel, camera: camera_params.build_camera(), integrator })
+    Ok(Self { samples_per_pixel, camera: camera_params.build_camera(), integrators })
   }
 
   pub fn render_scene(self, settings: RenderSettings) -> DynamicImage {
@@ -111,7 +111,7 @@ impl Renderer {
       .build();
 
     // Move all shared data into atomic reference counters.
-    let integrator = Arc::new(self.integrator);
+    let integrators = Arc::new(self.integrators);
     let camera = Arc::new(self.camera);
     let image_lock = Arc::new(Mutex::new(image));
 
@@ -152,7 +152,7 @@ impl Renderer {
       // Send the render job to the threadpool
       Self::async_integrate_subimage(
         &thread_pool,
-        &integrator,
+        &integrators,
         &camera,
         self.samples_per_pixel,
         &image_lock,
@@ -197,14 +197,14 @@ impl Renderer {
 
   fn async_integrate_subimage(
     thread_pool: &ThreadPool,
-    integrator: &Arc<Box<dyn Integrator>>,
+    integrators: &Arc<Vec<Box<dyn Integrator>>>,
     camera: &Arc<Camera>,
     samples_per_pixel: usize,
     image_lock: &Arc<Mutex<Image>>,
     ((sub_x, sub_y), (sub_w, sub_h)): ((u32, u32), (u32, u32))
   ) {
     // Copy the ARCs.
-    let integrator = integrator.clone();
+    let integrators = integrators.clone();
     let camera = camera.clone();
     let image_lock = image_lock.clone();
 
@@ -213,8 +213,8 @@ impl Renderer {
       // Create a temporary image buffer to render into.
       let mut subimage = Image::new(sub_w, sub_h);
 
-      // Precompute 1 / samples_per_pixel to save some time.
-      let inv_spp = 1.0 / (samples_per_pixel as Real);
+      // Precompute divisions to save some time.
+      let inv_num_samples = 1.0 / ((samples_per_pixel * integrators.len()) as Real);
 
       // Build samplers for this subimage thread.
       let mut ray_sampler = IndependentSampler::new();
@@ -226,17 +226,19 @@ impl Renderer {
         for y in 0..sub_h {
           let mut light = Color::black();
           for _ in 0..samples_per_pixel {
-            // Generate a slightly jittered ray through pixel (x, y).
-            let ray_x = ray_sampler.next() + (sub_x + x) as Real;
-            let ray_y = ray_sampler.next() + (sub_y + y) as Real;
-            let ray = camera.sample_ray_through_pixel(&mut ray_sampler, ray_x, ray_y);
+            for integrator in integrators.iter() {
+              // Generate a slightly jittered ray through pixel (x, y).
+              let ray_x = ray_sampler.next() + (sub_x + x) as Real;
+              let ray_y = ray_sampler.next() + (sub_y + y) as Real;
+              let ray = camera.sample_ray_through_pixel(&mut ray_sampler, ray_x, ray_y);
 
-            // Add the incoming radiance to our running average.
-            light += integrator.radiance_estimate(&mut integrator_sampler, ray);
+              // Add the incoming radiance to our running average.
+              light += integrator.radiance_estimate(&mut integrator_sampler, ray);
+            }
           }
 
           // Convert to sRGB, which is the color space expected by the image buffer
-          let mut srgb = light * inv_spp;
+          let mut srgb = light * inv_num_samples;
           for c in srgb.inner.iter_mut() {
             if *c <= 0.0031308 {
               *c *= 12.92;

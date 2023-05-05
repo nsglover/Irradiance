@@ -9,12 +9,20 @@
 		"fdist": 800,
     "resolution": [1024, 1024]
 	},
-	"samples-per-pixel": 2048,
+	"samples-per-pixel": 4,
 	"background": [0,0,0],
-  "integrator":
+  "_integrator":
   {
     "type": "material-path-tracer",
     "average-path-length": 256
+  },
+  "integrator":
+  {
+    "type": "progressive-photon-tracer",
+    "total-photons": 256000000,
+    "average-path-length": 256,
+    "initial-radius": 5,
+    "iterations": 16
   },
 	"materials": [
 		{
@@ -51,7 +59,6 @@
 		}
 	],
 	"surfaces": [
-		
 		{
 			"type": "quad",
 			"transform": [

@@ -20,23 +20,25 @@ struct Parameters {
 
 #[typetag::deserialize(name = "material-path-tracer")]
 impl IntegratorParameters for Parameters {
-  fn build_integrator(
+  fn build_integrators(
     &self,
     scene: Scene,
     _: BuildSettings
-  ) -> Result<Box<dyn Integrator>, Box<dyn std::error::Error>> {
-    Ok(Box::new(MaterialPathTracer {
+  ) -> Result<Vec<Box<dyn Integrator>>, Box<dyn std::error::Error>> {
+    Ok(vec![Box::new(MaterialPathTracer {
       scene,
-      path_termination_probability: 1.0 / (self.average_path_length as Real),
+      path_termination_probability: PositiveReal::new_unchecked(
+        1.0 / (self.average_path_length as Real)
+      ),
       background: Color::black()
-    }))
+    })])
   }
 }
 
 pub struct MaterialPathTracer {
-  pub(super) scene: Scene,
-  pub(super) path_termination_probability: Real,
-  pub(super) background: Color
+  scene: Scene,
+  path_termination_probability: PositiveReal,
+  background: Color
 }
 
 impl PathTraceIntegrator for MaterialPathTracer {

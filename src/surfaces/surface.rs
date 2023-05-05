@@ -1,7 +1,10 @@
 use std::{collections::HashMap, fmt::Debug, sync::Arc};
 
 use super::Mesh;
-use crate::{common::Wrapper, materials::Material, math::*, raytracing::*, BuildSettings};
+use crate::{
+  common::Wrapper, light::Color, materials::Material, math::*, raytracing::*,
+  sampling::ContinuousRandomVariable, BuildSettings
+};
 
 #[typetag::deserialize(tag = "type")]
 pub trait SurfaceParameters: Debug {
@@ -21,7 +24,11 @@ pub trait Surface: Debug {
     ray: &mut WorldRay
   ) -> Option<(WorldRayIntersection, &dyn Material)>;
 
+  fn emitted_ray_random_variable(&self) -> &dyn ContinuousRandomVariable<(), (WorldRay, Color)>;
+
   fn world_bounding_box(&self) -> WorldBoundingBox;
+
+  fn num_subsurfaces(&self) -> usize;
 }
 
 pub trait TransformedSurface {
@@ -34,7 +41,11 @@ pub trait TransformedSurface {
     ray: &mut Ray3<Self::LocalSpace>
   ) -> Option<(RayIntersection<Self::LocalSpace>, &dyn Material)>;
 
+  fn emitted_ray_random_variable(&self) -> &dyn ContinuousRandomVariable<(), (WorldRay, Color)>;
+
   fn local_bounding_box(&self) -> BoundingBox3<Self::LocalSpace>;
+
+  fn num_subsurfaces(&self) -> usize;
 }
 
 // TODO: Move this to transform class
@@ -46,6 +57,10 @@ impl<T: TransformedSurface + Debug> Surface for T {
     let tr = self.local_to_world();
     let mut local_ray = tr.inverse_ray(&ray);
     self.intersect_ray(&mut local_ray).map(|(local_hit, mat)| (tr.ray_intersect(&local_hit), mat))
+  }
+
+  fn emitted_ray_random_variable(&self) -> &dyn ContinuousRandomVariable<(), (WorldRay, Color)> {
+    self.emitted_ray_random_variable()
   }
 
   fn world_bounding_box(&self) -> WorldBoundingBox {
@@ -73,6 +88,8 @@ impl<T: TransformedSurface + Debug> Surface for T {
       transformed_bbox
     }
   }
+
+  fn num_subsurfaces(&self) -> usize { self.num_subsurfaces() }
 
   // fn intersecting_direction_sample(
   //   &self,

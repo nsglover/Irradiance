@@ -1,12 +1,13 @@
-use std::{sync::Arc, time::Duration};
+use std::{collections::HashMap, sync::Arc, time::Duration};
 
 use indicatif::{ProgressBar, ProgressDrawTarget, ProgressStyle};
 use rand::{distributions::Uniform, Rng};
 use serde_derive::Deserialize;
 
-use super::{surface_list::*, *};
+use super::{emission::UniformChoiceEmittedRayRandomVariable, surface_list::*, *};
 use crate::{
-  duration_to_hms, materials::Material, math::*, raytracing::*, surfaces::Surface, BuildSettings
+  duration_to_hms, light::Color, materials::Material, math::*, raytracing::*,
+  sampling::ContinuousRandomVariable, surfaces::Surface, BuildSettings
 };
 
 #[derive(Debug, Clone, Copy, Deserialize)]
@@ -53,7 +54,7 @@ impl SurfaceParameters for BvhParameters {
 
 #[derive(Debug)]
 enum BvhNodeType {
-  Leaf(SurfaceList),
+  Leaf(Arc<SurfaceList>),
   Node(Option<Box<BvhNode>>, Option<Box<BvhNode>>)
 }
 
@@ -101,7 +102,8 @@ impl BvhNode {
 
 #[derive(Debug)]
 pub struct BoundingVolumeHierarchy {
-  root_node: BvhNode
+  root_node: BvhNode,
+  emitted_ray_random_var: UniformChoiceEmittedRayRandomVariable
 }
 
 impl BoundingVolumeHierarchy {
@@ -110,7 +112,7 @@ impl BoundingVolumeHierarchy {
     partition_strategy: PartitionStrategy,
     max_leaf_primitives: usize,
     maybe_progress_bar: Option<ProgressBar>
-  ) -> Option<BvhNode> {
+  ) -> Option<(BvhNode, Vec<Arc<SurfaceList>>)> {
     let num_surfaces = surfaces.len();
     let bounding_boxes: Vec<_> = surfaces.iter().map(|s| s.world_bounding_box()).collect();
     let bounding_box = bounding_boxes.iter().fold(WorldBoundingBox::default(), |mut acc, bbox| {
@@ -134,11 +136,12 @@ impl BoundingVolumeHierarchy {
           progress_bar.set_message(duration_to_hms(&projected));
         }
 
-        Some(BvhNode { bounding_box, node_type: BvhNodeType::Leaf(SurfaceList::build(surfaces)) })
+        let leaf = Arc::new(SurfaceList::build(surfaces));
+        Some((BvhNode { bounding_box, node_type: BvhNodeType::Leaf(leaf.clone()) }, vec![leaf]))
       }
     } else {
-      let left: Option<BvhNode>;
-      let right: Option<BvhNode>;
+      let left: Option<(BvhNode, Vec<Arc<SurfaceList>>)>;
+      let right: Option<(BvhNode, Vec<Arc<SurfaceList>>)>;
       match partition_strategy {
         PartitionStrategy::SurfaceAreaHeuristic => {
           const NUM_BUCKETS: usize = 12;
@@ -241,10 +244,16 @@ impl BoundingVolumeHierarchy {
         maybe_progress_bar
       );
 
-      Some(BvhNode {
-        bounding_box,
-        node_type: BvhNodeType::Node(left.map(Box::new), right.map(Box::new))
-      })
+      let mut leaves = left.as_ref().map(|p| p.1.clone()).unwrap_or_default();
+      leaves.append(&mut right.as_ref().map(|p| p.1.clone()).unwrap_or_default());
+
+      Some((
+        BvhNode {
+          bounding_box,
+          node_type: BvhNodeType::Node(left.map(|p| Box::new(p.0)), right.map(|p| Box::new(p.0)))
+        },
+        leaves
+      ))
     }
   }
 
@@ -272,14 +281,19 @@ impl BoundingVolumeHierarchy {
       progress_bar
     });
 
+    let (root_node, leaves) = Self::build_node(
+      surfaces,
+      partition_strategy,
+      max_leaf_primitives,
+      maybe_progress_bar.clone()
+    )
+    .unwrap();
+
     let s = Self {
-      root_node: Self::build_node(
-        surfaces,
-        partition_strategy,
-        max_leaf_primitives,
-        maybe_progress_bar.clone()
+      root_node,
+      emitted_ray_random_var: UniformChoiceEmittedRayRandomVariable::new(
+        leaves.into_iter().map(|s| s as Arc<dyn Surface>).collect()
       )
-      .unwrap()
     };
 
     if let Some(progress_bar) = maybe_progress_bar {
@@ -299,4 +313,10 @@ impl Surface for BoundingVolumeHierarchy {
   }
 
   fn world_bounding_box(&self) -> WorldBoundingBox { self.root_node.bounding_box.clone() }
+
+  fn emitted_ray_random_variable(&self) -> &dyn ContinuousRandomVariable<(), (WorldRay, Color)> {
+    &self.emitted_ray_random_var
+  }
+
+  fn num_subsurfaces(&self) -> usize { self.emitted_ray_random_var.num_surfaces() }
 }

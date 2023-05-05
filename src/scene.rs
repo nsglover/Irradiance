@@ -27,4 +27,10 @@ impl Scene {
 
     closest
   }
+
+  pub fn emissive_part(&self) -> &dyn Surface { self.surface_partition[1].as_ref() }
 }
+
+unsafe impl Send for Scene {}
+
+unsafe impl Sync for Scene {}

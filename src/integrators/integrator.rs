@@ -6,11 +6,11 @@ use crate::{
 
 #[typetag::deserialize(tag = "type")]
 pub trait IntegratorParameters: Debug {
-  fn build_integrator(
+  fn build_integrators(
     &self,
     scene: Scene,
     settings: BuildSettings
-  ) -> Result<Box<dyn Integrator>, Box<dyn Error>>;
+  ) -> Result<Vec<Box<dyn Integrator>>, Box<dyn Error>>;
 }
 
 #[typetag::deserialize(tag = "type")]
@@ -23,7 +23,7 @@ pub trait Integrator: Send + Sync {
 pub trait PathTraceIntegrator {
   fn initial_path_terminator(&self, ray: WorldRay) -> PathTerminator;
 
-  /// Returns Ok((emitted, attenuation, scattered_ray, maybe_pdf)) or Err(background_light)
+  /// Returns Ok((emitted, attenuation, scattered_ray, maybe_pdf)) or Err(final_estimate)
   fn sample_scatter(
     &self,
     sampler: &mut dyn Sampler,

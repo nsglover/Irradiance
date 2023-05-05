@@ -5,7 +5,13 @@ use serde::Deserialize;
 
 use super::*;
 use crate::{
-  common::Wrapper, materials::Material, math::*, raytracing::*, textures::TextureCoordinate,
+  common::Wrapper,
+  light::Color,
+  materials::Material,
+  math::*,
+  raytracing::*,
+  sampling::{ContinuousRandomVariable, Sampler},
+  textures::TextureCoordinate,
   BuildSettings
 };
 
@@ -23,15 +29,25 @@ impl SurfaceParameters for QuadSurfaceParameters {
     _: &HashMap<String, Mesh>,
     _: BuildSettings
   ) -> Box<dyn Surface> {
+    let transform = self.transform.clone().build_transform();
+    let normal = Vector3::from(na::vector![0.0, 0.0, 1.0]).normalize();
+    let transformed_surface_area = 4.0
+      * transform
+        .vector(&na::vector![0.5, 0.0, 0.0].into())
+        .cross(&transform.vector(&na::vector![0.0, 0.5, 0.0].into()))
+        .norm();
+
     Box::new(QuadSurface {
-      transform: self.transform.clone().build_transform(),
+      transformed_normal: transform.normal(&normal),
+      normal,
+      inverse_transformed_area: PositiveReal::new_unchecked(1.0 / transformed_surface_area),
       material: materials.get(&self.material).unwrap().clone(),
-      normal: Vector3::from(na::vector![0.0, 0.0, 1.0]).normalize()
+      transform
     })
   }
 
   fn is_emissive(&self, materials: &HashMap<String, Arc<dyn Material>>) -> bool {
-    materials.get(&self.material).unwrap().is_emissive()
+    materials.get(&self.material).unwrap().emit_random_variable().is_some()
   }
 }
 
@@ -44,7 +60,45 @@ impl Space<3> for QuadSpace {}
 pub struct QuadSurface {
   transform: LocalToWorld<QuadSpace>,
   material: Arc<dyn Material>,
-  normal: UnitVector3<<Self as TransformedSurface>::LocalSpace>
+  normal: UnitVector3<<Self as TransformedSurface>::LocalSpace>,
+  transformed_normal: WorldUnitVector,
+  inverse_transformed_area: PositiveReal
+}
+
+impl ContinuousRandomVariable<(), (WorldRay, Color)> for QuadSurface {
+  fn sample_with_pdf(
+    &self,
+    _: &(),
+    sampler: &mut dyn Sampler
+  ) -> Option<((WorldRay, Color), PositiveReal)> {
+    self
+      .material
+      .emit_random_variable()
+      .map(|rv| {
+        let rand_x = sampler.random_in_closed(-0.5, 0.5);
+        let rand_y = sampler.random_in_closed(-0.5, 0.5);
+        let point = self.transform.point(&Point::from_array([rand_x, rand_y, 0.0]));
+
+        rv.sample_with_pdf(&(point, self.transformed_normal), sampler).map(|((dir, light), pdf)| {
+          (
+            (Ray::new(point, dir), light * dir.dot(&self.transformed_normal).abs()),
+            pdf * self.inverse_transformed_area
+          )
+        })
+      })
+      .flatten()
+  }
+
+  fn pdf(&self, _: &(), sample: &(WorldRay, Color)) -> Option<PositiveReal> {
+    self
+      .material
+      .emit_random_variable()
+      .map(|rv| {
+        rv.pdf(&(sample.0.origin(), self.transformed_normal), &(sample.0.dir(), sample.1))
+          .map(|p| p * self.inverse_transformed_area)
+      })
+      .flatten()
+  }
 }
 
 impl TransformedSurface for QuadSurface {
@@ -85,6 +139,12 @@ impl TransformedSurface for QuadSurface {
   fn local_bounding_box(&self) -> BoundingBox3<Self::LocalSpace> {
     BoundingBox3::new(na::point![-0.5, -0.5, 0.0].into(), na::point![0.5, 0.5, 0.0].into())
   }
+
+  fn emitted_ray_random_variable(&self) -> &dyn ContinuousRandomVariable<(), (WorldRay, Color)> {
+    self
+  }
+
+  fn num_subsurfaces(&self) -> usize { 1 }
 
   // fn intersecting_direction_sample(
   //   &self,

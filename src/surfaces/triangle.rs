@@ -4,7 +4,8 @@ use serde::Deserialize;
 
 use super::{bvh::*, *};
 use crate::{
-  materials::Material, math::*, raytracing::*, textures::TextureCoordinate, BuildSettings
+  light::Color, materials::Material, math::*, raytracing::*, sampling::ContinuousRandomVariable,
+  textures::TextureCoordinate, BuildSettings
 };
 
 #[derive(Debug, Deserialize)]
@@ -42,7 +43,7 @@ impl SurfaceParameters for TriangleMeshSurfaceParameters {
   }
 
   fn is_emissive(&self, materials: &HashMap<String, Arc<dyn Material>>) -> bool {
-    materials.get(&self.material).unwrap().is_emissive()
+    materials.get(&self.material).unwrap().emit_random_variable().is_some()
   }
 }
 
@@ -100,7 +101,7 @@ impl Surface for TriangleSurface {
 
     let pvec = dir.cross(&self.edge2);
     let det = self.edge1.dot(&pvec);
-    if det.abs() < 1e-8 {
+    if det.abs() < 0.00001 {
       return None;
     }
 
@@ -136,5 +137,11 @@ impl Surface for TriangleSurface {
     }
   }
 
+  fn emitted_ray_random_variable(&self) -> &dyn ContinuousRandomVariable<(), (WorldRay, Color)> {
+    todo!()
+  }
+
   fn world_bounding_box(&self) -> WorldBoundingBox { self.bounding_box.clone() }
+
+  fn num_subsurfaces(&self) -> usize { 1 }
 }

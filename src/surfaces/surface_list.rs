@@ -1,9 +1,17 @@
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 
 use serde::Deserialize;
 
 use super::*;
-use crate::{materials::Material, math::*, raytracing::*, surfaces::Surface, BuildSettings};
+use crate::{
+  light::Color,
+  materials::Material,
+  math::*,
+  raytracing::*,
+  sampling::{ContinuousRandomVariable, Sampler},
+  surfaces::Surface,
+  BuildSettings
+};
 
 #[derive(Debug, Deserialize)]
 pub struct SurfaceListParameters {
@@ -31,6 +39,7 @@ impl SurfaceParameters for SurfaceListParameters {
 
 #[derive(Debug)]
 pub struct SurfaceList {
+  inverse_num_surfaces: PositiveReal,
   surfaces: Vec<(Box<dyn Surface>, WorldBoundingBox)>,
   bounding_box: WorldBoundingBox
 }
@@ -43,7 +52,46 @@ impl SurfaceList {
       acc
     });
 
-    Self { surfaces: surfaces.into_iter().zip(bboxes.into_iter()).collect(), bounding_box }
+    Self {
+      inverse_num_surfaces: PositiveReal::new_unchecked(1.0 / surfaces.len() as Real),
+      surfaces: surfaces.into_iter().zip(bboxes.into_iter()).collect(),
+      bounding_box
+    }
+  }
+}
+
+impl ContinuousRandomVariable<(), (WorldRay, Color)> for SurfaceList {
+  fn sample(&self, param: &(), sampler: &mut dyn Sampler) -> Option<(WorldRay, Color)> {
+    let index = sampler.random_in_closed_open(0.0, self.surfaces.len() as Real) as usize;
+    let (surface, _) = &self.surfaces[index];
+    surface.emitted_ray_random_variable().sample(param, sampler)
+  }
+
+  fn sample_with_pdf(
+    &self,
+    param: &(),
+    sampler: &mut dyn Sampler
+  ) -> Option<((WorldRay, Color), PositiveReal)> {
+    if let Some(sample) = self.sample(param, sampler) {
+      if let Some(pdf) = self.pdf(param, &sample) {
+        return Some((sample, pdf));
+      }
+    }
+
+    None
+  }
+
+  fn pdf(&self, param: &(), sample: &(WorldRay, Color)) -> Option<PositiveReal> {
+    PositiveReal::new(
+      self
+        .surfaces
+        .iter()
+        .filter_map(|(s, _)| {
+          s.emitted_ray_random_variable().pdf(param, sample).map(|p| p.into_inner())
+        })
+        .sum::<Real>()
+        * self.inverse_num_surfaces
+    )
   }
 }
 
@@ -65,7 +113,13 @@ impl Surface for SurfaceList {
     closest
   }
 
+  fn emitted_ray_random_variable(&self) -> &dyn ContinuousRandomVariable<(), (WorldRay, Color)> {
+    self
+  }
+
   fn world_bounding_box(&self) -> WorldBoundingBox { self.bounding_box.clone() }
+
+  fn num_subsurfaces(&self) -> usize { self.surfaces.len() }
 
   // fn pdf(&self, point: &WorldPoint, direction: &WorldUnitVector) -> Real {
   //   self

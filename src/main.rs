@@ -16,33 +16,43 @@ mod scene;
 mod surfaces;
 mod textures;
 
-// Project Features:
-// TODO: Photon mapping
-// TODO: Unbiased photon mapping
-// TODO: If time permits, MIS with unbiased photon mapping and material path tracing
-// TODO: README.md
+// Top Priority:
+// TODO: Any TODOs scattered throughout the code
+// TODO: BSDF SHOULD NOT RETURN COSINE TERM!!!
+// TODO: BSDF SHOULD USE MATHEMATICAL CONVENTIONS FOR INPUT DIRECTION (i.e. negate it!)
+// TODO: Split hit info into surface info and other stuff (like intersect time)
+// TODO: Scale refracted radiance by ni^2/no^2 or whatever it is
+// TODO: Add a debug mode which checks for NaNs and infinites and stuff like that?
 
-// Important Features:
+// Major Features:
+// TODO: Allow rays to carry more information
 // TODO: Image loading and image texture implementation
-// TODO: Use mesh surface normals when available
+// TODO: Use mesh surface normals and texcoords when available. Make sure to adjust for this in all
+//       integrators; need to multiply by a ratio of dot products with geometric and shading normal
 // TODO: Stratified sampling
 // TODO: Direct-lighting MIS and mixture sampling
 // TODO: Generalize MIS and mixture integrators to work with any number of arbitrary integrators
+// TODO: Interfering mediums
+// TODO: Even fancier integrators
 
-// Important Optimizations:
+// Major Optimizations:
+// TODO: Avoid dynamically transformed surfaces at all costs; only do this for sufficiently
+//       complex implicit surfaces which are invariant under linear transformation (not spheres)
 // TODO: Investigate the performance disparity and fix it
 
-// Minor Code Improvements:
-// TODO: Allow user to customize whether we use BVH or surface list for the emissive partition
-// TODO: SurfaceParameters should just return one surface
-// TODO: All parameter structs should be consumed upon building their target
-// TODO: Negate RayIntersection::intersect_direction to match BSDF convention
-
 // Minor Features:
-// TODO: Perlin noise
+// TODO: Perlin noise texture
+// TODO: All the PA2 BSDFs
 // TODO: Blend material (from any number of materials, which can be implemented using the original
 //       one that just works for two.)
 // TODO: Environment map
+
+// Minor Code Improvements:
+// TODO: Move camera into scene, make samples-per-pixel an integrator-specific thing
+// TODO: Allow user to customize whether we use BVH or surface list for the emissive partition
+// TODO: Better distinction between emissive and non-emissive things
+// TODO: Better distinction between directions and surface normals
+// TODO: All parameter structs should be consumed upon building their target
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = Some(""))]

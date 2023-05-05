@@ -1,7 +1,7 @@
 {
 	"camera": {
 		"transform": {
-			"from": [0, 20, 1077.5],
+			"from": [0, 100, 1077.5],
 			"at": [0, -4, 0],
 			"up": [0, 1, 0]
 		},
@@ -9,7 +9,7 @@
 		"fdist": 800,
     "resolution": [1024, 1024]
 	},
-	"samples-per-pixel": 128,
+	"samples-per-pixel": 1,
 	"background": [0,0,0],
   "_integrator":
   {
@@ -18,10 +18,12 @@
   },
   "integrator":
   {
-    "type": "photon-tracer",
-    "total-photons": 128000000,
+    "type": "progressive-photon-tracer",
+    "total-photons": 64000000,
     "average-path-length": 256,
-    "radiance-estimate-photons": 64
+    "initial-radius": 1,
+    "shrinking-factor": 0.33,
+    "iterations": 64
   },
 	"materials": [
 		{
@@ -43,7 +45,7 @@
 			"type": "diffuse light",
 			"name": "light",
 			"emit": {"type": "constant", "color": 1},
-      "intensity": 15
+      "intensity": 25
 		},
 		{
 			"type": "mirror",
@@ -53,7 +55,7 @@
 		{
 			"type": "dielectric",
 			"name": "glass",
-			"albedo": {"type": "constant", "color": 1},
+			"albedo": {"type": "constant", "color": [0.552941, 0.988235, 0.933333]},
       "ior": 1.5
 		}
 	],
@@ -157,20 +159,15 @@
 			],
 			"material": "light"
 		},
-    {
-			"type": "mesh",
-			"transform": [
-                { "scale": 100 },
-                { "translate": [140,-177.5,100]}
-            ],
-			"mesh": "dragon",
-			"material": "metal"
-		},
 		{
 			"type": "mesh",
 			"transform": [
-                { "scale": 100 },
-                { "translate": [-140,-177.5,-100] }
+                {
+                  "axis": [0, 1, 0],
+                  "angle": 45
+                },
+                { "scale": 200 },
+                { "translate": [0,-275, 50] }
             ],
 			"mesh": "dragon",
 			"material": "glass"

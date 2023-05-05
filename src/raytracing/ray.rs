@@ -13,7 +13,7 @@ where Const<D>: ToTypenum
   dir: UnitVector<D, S>
 }
 
-const MIN_INTERSECT_TIME: PositiveReal = PositiveReal::new_unchecked(0.00001);
+const MIN_INTERSECT_TIME: PositiveReal = PositiveReal::new_unchecked(0.001);
 
 impl<const D: usize, S: Space<D>> Ray<D, S>
 where Const<D>: ToTypenum

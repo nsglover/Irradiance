@@ -1,6 +1,11 @@
 use std::{fmt::Debug, sync::Arc};
 
-use crate::{light::*, math::*, raytracing::*, sampling::RandomVariable};
+use crate::{
+  light::*,
+  math::*,
+  raytracing::*,
+  sampling::{ContinuousRandomVariable, RandomVariable}
+};
 
 #[typetag::deserialize(tag = "type")]
 pub trait MaterialParameters: Debug {
@@ -18,5 +23,7 @@ pub trait Material: Debug {
 
   fn scatter_random_variable(&self) -> Option<&ScatterRandomVariable>;
 
-  fn is_emissive(&self) -> bool;
+  fn emit_random_variable(
+    &self
+  ) -> Option<&dyn ContinuousRandomVariable<(WorldPoint, WorldUnitVector), (WorldUnitVector, Color)>>;
 }
