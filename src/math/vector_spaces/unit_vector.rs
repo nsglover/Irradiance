@@ -61,17 +61,13 @@ where Const<D>: ToTypenum
 impl<const D: usize, S: Space<D>> std::fmt::Display for UnitVector<D, S>
 where Const<D>: ToTypenum
 {
-  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-    write!(f, "{}", self.inner.into_inner())
-  }
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result { write!(f, "{}", self.inner.into_inner()) }
 }
 
 impl<const D: usize, S: Space<D>> From<na::Unit<na::SVector<Real, D>>> for UnitVector<D, S>
 where Const<D>: ToTypenum
 {
-  fn from(raw: na::Unit<na::SVector<Real, D>>) -> Self {
-    Self { inner: raw, _phantom: Phantom::default() }
-  }
+  fn from(raw: na::Unit<na::SVector<Real, D>>) -> Self { Self { inner: raw, _phantom: Phantom::default() } }
 }
 
 impl<const D: usize, S: Space<D>> From<UnitVector<D, S>> for na::Unit<na::SVector<Real, D>>

@@ -9,7 +9,7 @@
 		"fdist": 800,
     "resolution": [2048, 2048]
 	},
-	"samples-per-pixel": 16384,
+	"samples-per-pixel": 1,
 	"background": [0,0,0],
 	"accelerator":
 	{
@@ -17,8 +17,12 @@
 	},
   "integrator":
   {
-    "type": "material-path-tracer",
-    "max_bounces": 1024
+    "type": "progressive-photon-tracer",
+    "total-photons": 256000000,
+    "average-path-length": 256,
+    "initial-radius": 2,
+    "shrinking-factor": 0.5,
+    "iterations": 128
   },
 	"materials": [
 		{
@@ -28,7 +32,7 @@
 		},
 		{
 			"type": "lambertian",
-			"name": "orange",
+			"name": "red",
 			"albedo": {"type": "constant", "color": [0.839216, 0.231373, 0.0235294]}
 		},
 		{
@@ -58,16 +62,21 @@
 		{
 			"type": "quad",
 			"transform": [
+        {
+          "scale": 555
+        },
 				{
 					"translate": [0, 0, -277.5]
 				}
 			],
-			"size": [555,555],
 			"material": "grey"
 		},
 		{
 			"type": "quad",
 			"transform": [
+        {
+          "scale": 555
+        },
 				{
 					"axis": [1, 0, 0],
 					"angle": 90
@@ -82,6 +91,9 @@
 		{
 			"type": "quad",
 			"transform": [
+        {
+          "scale": 555
+        },
 				{
 					"axis": [1, 0, 0],
 					"angle": -90
@@ -90,12 +102,14 @@
 					"translate": [0, -277.5, 0]
 				}
 			],
-			"size": [555,555],
 			"material": "grey"
 		},
 		{
 			"type": "quad",
 			"transform": [
+        {
+          "scale": 555
+        },
 				{
 					"axis": [0, 1, 0],
 					"angle": 90
@@ -104,12 +118,14 @@
 					"translate": [-277.5, 0, 0]
 				}
 			],
-			"size": [555,555],
 			"material": "green"
 		},
 		{
 			"type": "quad",
 			"transform": [
+        {
+          "scale": 555
+        },
 				{
 					"axis": [0, 1, 0],
 					"angle": -90
@@ -118,12 +134,14 @@
 					"translate": [277.5, 0, 0]
 				}
 			],
-			"size": [555,555],
-			"material": "orange"
+			"material": "red"
 		},
 		{
 			"type": "quad",
 			"transform": [
+        {
+          "scale": 130
+        },
 				{
 					"axis": [1, 0, 0],
 					"angle": 90
@@ -132,18 +150,22 @@
 					"translate": [0, 277, 0]
 				}
 			],
-			"size": [130,130],
 			"material": "light"
 		},
 		{
 			"type": "sphere",
-			"transform": { "translate": [140,-177.5,100] },
-			"radius": 100,
+			"transform": [
+        { "scale": 100 },
+        { "translate": [140,-177.5,100] }
+      ],
 			"material": "glass"
 		},
 		{
 			"type": "sphere",
-			"transform": { "translate": [-140,-177.5,-100] },
+			"transform": [
+        { "scale": 100 },
+        { "translate": [-140,-177.5,-100] }
+      ],
 			"radius": 100,
 			"material": "metal"
 		}

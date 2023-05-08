@@ -9,7 +9,7 @@
 		"fdist": 800,
     "resolution": [1024, 1024]
 	},
-	"samples-per-pixel": 4,
+	"samples-per-pixel": 1,
 	"background": [0,0,0],
   "_integrator":
   {
@@ -19,10 +19,11 @@
   "integrator":
   {
     "type": "progressive-photon-tracer",
-    "total-photons": 256000000,
+    "total-photons": 128000000,
     "average-path-length": 256,
-    "initial-radius": 5,
-    "iterations": 16
+    "initial-radius": 1,
+    "shrinking-factor": 0.33,
+    "iterations": 32
   },
 	"materials": [
 		{

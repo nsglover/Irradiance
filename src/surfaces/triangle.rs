@@ -26,20 +26,12 @@ impl SurfaceParameters for TriangleMeshSurfaceParameters {
     let triangles = meshes
       .get(&self.mesh)
       .unwrap()
-      .to_triangles(
-        self.transform.clone().build_transform(),
-        materials.get(&self.material).unwrap().clone()
-      )
+      .to_triangles(self.transform.clone().build_transform(), materials.get(&self.material).unwrap().clone())
       .into_iter()
       .map(|t| Box::new(t) as Box<dyn Surface>)
       .collect();
 
-    Box::new(BoundingVolumeHierarchy::build(
-      triangles,
-      PartitionStrategy::SurfaceAreaHeuristic,
-      2,
-      settings
-    ))
+    Box::new(BoundingVolumeHierarchy::build(triangles, PartitionStrategy::SurfaceAreaHeuristic, 2, settings))
   }
 
   fn is_emissive(&self, materials: &HashMap<String, Arc<dyn Material>>) -> bool {
@@ -63,9 +55,9 @@ pub struct TriangleSurface {
 
 impl TriangleSurface {
   pub fn new(
-    v0 @ (p0, _, _): VertexInfo,
-    v1 @ (p1, _, _): VertexInfo,
-    v2 @ (p2, _, _): VertexInfo,
+    v0 @ (p0, ..): VertexInfo,
+    v1 @ (p1, ..): VertexInfo,
+    v2 @ (p2, ..): VertexInfo,
     material: Arc<dyn Material>
   ) -> Self {
     let mut bounding_box = WorldBoundingBox::default();
@@ -76,24 +68,12 @@ impl TriangleSurface {
     let edge1 = p1 - p0;
     let edge2 = p2 - p0;
 
-    Self {
-      v0,
-      v1,
-      v2,
-      edge1,
-      edge2,
-      true_normal: edge1.cross(&edge2).normalize(),
-      bounding_box,
-      material
-    }
+    Self { v0, v1, v2, edge1, edge2, true_normal: edge1.cross(&edge2).normalize(), bounding_box, material }
   }
 }
 
 impl Surface for TriangleSurface {
-  fn intersect_world_ray(
-    &self,
-    ray: &mut WorldRay
-  ) -> Option<(WorldRayIntersection, &dyn Material)> {
+  fn intersect_world_ray(&self, ray: &mut WorldRay) -> Option<(WorldRayIntersection, &dyn Material)> {
     let (p0, _, t0) = self.v0;
     let (p1, _, t1) = self.v1;
     let (p2, _, t2) = self.v2;
@@ -137,9 +117,7 @@ impl Surface for TriangleSurface {
     }
   }
 
-  fn emitted_ray_random_variable(&self) -> &dyn ContinuousRandomVariable<(), (WorldRay, Color)> {
-    todo!()
-  }
+  fn emitted_ray_random_variable(&self) -> &dyn ContinuousRandomVariable<(), (WorldRay, Color)> { todo!() }
 
   fn world_bounding_box(&self) -> WorldBoundingBox { self.bounding_box.clone() }
 

@@ -47,9 +47,7 @@ impl<In: Space<3>, Out: Space<3>> Transform<In, Out> for MatrixTransform<In, Out
 
   fn matrix(&self) -> MatrixTransform<In, Out> { self.clone() }
 
-  fn vector(&self, vector: &Vector3<In>) -> Vector3<Out> {
-    (self.matrix * vector.inner.to_homogeneous()).xyz().into()
-  }
+  fn vector(&self, vector: &Vector3<In>) -> Vector3<Out> { (self.matrix * vector.inner.to_homogeneous()).xyz().into() }
 
   fn point(&self, point: &Point3<In>) -> Point3<Out> {
     na::Point3::from_homogeneous(self.matrix * point.inner.to_homogeneous()).unwrap().into()

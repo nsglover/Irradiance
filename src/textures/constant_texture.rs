@@ -12,9 +12,7 @@ pub struct ConstantTextureParameters {
 
 #[typetag::deserialize(name = "constant")]
 impl TextureParameters for ConstantTextureParameters {
-  fn build_texture(&self) -> Arc<dyn Texture> {
-    Arc::new(ConstantTexture::new(self.color.build_color()))
-  }
+  fn build_texture(&self) -> Arc<dyn Texture> { Arc::new(ConstantTexture::new(self.color.build_color())) }
 }
 
 #[derive(Debug)]

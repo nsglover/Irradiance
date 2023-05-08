@@ -60,10 +60,7 @@ pub trait Transform<In: Space<3>, Out: Space<3>>: Debug + Display + Sync + Send 
     )
   }
 
-  fn inverse_ray_intersect<'a>(
-    &self,
-    ray_intersection: &RayIntersection<Out>
-  ) -> RayIntersection<In> {
+  fn inverse_ray_intersect<'a>(&self, ray_intersection: &RayIntersection<Out>) -> RayIntersection<In> {
     let dir: Vector3<Out> = ray_intersection.intersect_direction.inner.into_inner().into();
     let (transformed_dir, time_dilation) = self.inverse_vector(&dir).normalize_with_norm();
 

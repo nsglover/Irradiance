@@ -2,8 +2,7 @@ use serde::Deserialize;
 
 use super::*;
 use crate::{
-  light::*, materials::ScatterRandomVariable, raytracing::*, sampling::Sampler, scene::Scene,
-  BuildSettings
+  light::*, materials::ScatterRandomVariable, raytracing::*, sampling::Sampler, scene::Scene, BuildSettings
 };
 
 #[derive(Debug, Deserialize)]

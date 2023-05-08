@@ -113,19 +113,13 @@ impl Mesh {
     }
   }
 
-  pub fn to_triangles(
-    &self,
-    transform: LocalToWorld<MeshSpace>,
-    material: Arc<dyn Material>
-  ) -> Vec<TriangleSurface> {
+  pub fn to_triangles(&self, transform: LocalToWorld<MeshSpace>, material: Arc<dyn Material>) -> Vec<TriangleSurface> {
     if self.indices.len() % 3 != 0 {
       panic!("Faces are not triangulated!")
     }
 
     let data: Vec<_> = (0..self.indices.len())
-      .map(|i| {
-        (self.get_point(i, &transform), self.get_normal(i, &transform), self.get_texcoords(i))
-      })
+      .map(|i| (self.get_point(i, &transform), self.get_normal(i, &transform), self.get_texcoords(i)))
       .collect();
 
     data

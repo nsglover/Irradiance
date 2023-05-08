@@ -62,13 +62,9 @@ where Const<D>: ToTypenum
 
   pub fn max_intersect_time(&self) -> PositiveReal { self.max_intersect_time }
 
-  pub fn time_bounds(&self) -> (PositiveReal, PositiveReal) {
-    (self.min_intersect_time(), self.max_intersect_time())
-  }
+  pub fn time_bounds(&self) -> (PositiveReal, PositiveReal) { (self.min_intersect_time(), self.max_intersect_time()) }
 
-  pub fn set_max_intersect_time(&mut self, max_time: PositiveReal) {
-    self.max_intersect_time = max_time;
-  }
+  pub fn set_max_intersect_time(&mut self, max_time: PositiveReal) { self.max_intersect_time = max_time; }
 }
 
 impl<const D: usize, S: Space<D>> Display for Ray<D, S>

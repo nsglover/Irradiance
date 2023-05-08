@@ -32,11 +32,7 @@ impl ContinuousRandomVariable<(), (WorldRay, Color)> for UniformChoiceEmittedRay
     surface.emitted_ray_random_variable().sample(param, sampler)
   }
 
-  fn sample_with_pdf(
-    &self,
-    param: &(),
-    sampler: &mut dyn Sampler
-  ) -> Option<((WorldRay, Color), PositiveReal)> {
+  fn sample_with_pdf(&self, param: &(), sampler: &mut dyn Sampler) -> Option<((WorldRay, Color), PositiveReal)> {
     if let Some(sample) = self.sample(param, sampler) {
       if let Some(pdf) = self.pdf(param, &sample) {
         return Some((sample, pdf));

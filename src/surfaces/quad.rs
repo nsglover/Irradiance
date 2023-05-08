@@ -66,11 +66,7 @@ pub struct QuadSurface {
 }
 
 impl ContinuousRandomVariable<(), (WorldRay, Color)> for QuadSurface {
-  fn sample_with_pdf(
-    &self,
-    _: &(),
-    sampler: &mut dyn Sampler
-  ) -> Option<((WorldRay, Color), PositiveReal)> {
+  fn sample_with_pdf(&self, _: &(), sampler: &mut dyn Sampler) -> Option<((WorldRay, Color), PositiveReal)> {
     self
       .material
       .emit_random_variable()
@@ -80,10 +76,7 @@ impl ContinuousRandomVariable<(), (WorldRay, Color)> for QuadSurface {
         let point = self.transform.point(&Point::from_array([rand_x, rand_y, 0.0]));
 
         rv.sample_with_pdf(&(point, self.transformed_normal), sampler).map(|((dir, light), pdf)| {
-          (
-            (Ray::new(point, dir), light * dir.dot(&self.transformed_normal).abs()),
-            pdf * self.inverse_transformed_area
-          )
+          ((Ray::new(point, dir), light * dir.dot(&self.transformed_normal).abs()), pdf * self.inverse_transformed_area)
         })
       })
       .flatten()
@@ -140,9 +133,7 @@ impl TransformedSurface for QuadSurface {
     BoundingBox3::new(na::point![-0.5, -0.5, 0.0].into(), na::point![0.5, 0.5, 0.0].into())
   }
 
-  fn emitted_ray_random_variable(&self) -> &dyn ContinuousRandomVariable<(), (WorldRay, Color)> {
-    self
-  }
+  fn emitted_ray_random_variable(&self) -> &dyn ContinuousRandomVariable<(), (WorldRay, Color)> { self }
 
   fn num_subsurfaces(&self) -> usize { 1 }
 

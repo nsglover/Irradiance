@@ -65,12 +65,7 @@ pub struct Camera {
 }
 
 impl Camera {
-  pub fn sample_ray_through_pixel(
-    &self,
-    sampler: &mut dyn Sampler,
-    mut u: Real,
-    mut v: Real
-  ) -> WorldRay {
+  pub fn sample_ray_through_pixel(&self, sampler: &mut dyn Sampler, mut u: Real, mut v: Real) -> WorldRay {
     u /= self.resolution.0 as Real;
     v /= self.resolution.1 as Real;
 

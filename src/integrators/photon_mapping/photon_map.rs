@@ -9,8 +9,7 @@ use kd_tree::KdTree3;
 
 use super::*;
 use crate::{
-  common::Wrapper, duration_to_hms, light::Color, math::*, raytracing::*, sampling::*,
-  scene::Scene, BuildSettings
+  common::Wrapper, duration_to_hms, light::Color, math::*, raytracing::*, sampling::*, scene::Scene, BuildSettings
 };
 
 pub struct PhotonMap {
@@ -34,10 +33,7 @@ impl PhotonMap {
         match scatter_rv {
           RandomVariable::Continuous(rv) => {
             // Store photon on diffuse surface
-            photons.push(
-              Photon { position: hit.intersect_point, direction, power: curr_photon.power }
-                .into_packed()
-            );
+            photons.push(Photon { position: hit.intersect_point, direction, power: curr_photon.power }.into_packed());
 
             // Sample the diffuse BSDF for the new photon's direction
             if let Some((scattered_dir, pdf)) = rv.sample_with_pdf(&hit, sampler) {
@@ -78,11 +74,7 @@ impl PhotonMap {
 
   const BATCH_SIZE: usize = 32000;
 
-  fn async_trace_photons(
-    scene: Arc<Scene>,
-    photons_lock: Arc<Mutex<(Vec<PackedPhoton>, usize)>>,
-    num_photons: usize
-  ) {
+  fn async_trace_photons(scene: Arc<Scene>, photons_lock: Arc<Mutex<(Vec<PackedPhoton>, usize)>>, num_photons: usize) {
     let mut sampler = IndependentSampler::new();
 
     loop {
@@ -98,13 +90,7 @@ impl PhotonMap {
           let emitted_photon = Photon::from_ray(&ray, initial_power);
           num_emitted_photons += 1;
 
-          Self::trace_photon(
-            emitted_photon,
-            &scene,
-            &mut sampler,
-            initial_power,
-            &mut photon_batch
-          );
+          Self::trace_photon(emitted_photon, &scene, &mut sampler, initial_power, &mut photon_batch);
         }
       }
 
@@ -120,20 +106,14 @@ impl PhotonMap {
     }
   }
 
-  fn trace_photons(
-    scene: Arc<Scene>,
-    num_photons: usize,
-    settings: BuildSettings
-  ) -> Vec<PackedPhoton> {
+  fn trace_photons(scene: Arc<Scene>, num_photons: usize, settings: BuildSettings) -> Vec<PackedPhoton> {
     // If enabled, start up the progress bar
     let maybe_progress_bar = settings.use_progress_bar.then(|| {
       let bar_style = "[ {elapsed_precise} / {msg} ]: {bar:50.cyan/magenta} ".to_string()
         + &format!("{{pos:>{}}}/{{len}} photons", (num_photons as f64).log10().ceil() as usize);
 
-      let progress_bar = ProgressBar::with_draw_target(
-        Some(num_photons as u64),
-        ProgressDrawTarget::stdout_with_hz(24)
-      );
+      let progress_bar =
+        ProgressBar::with_draw_target(Some(num_photons as u64), ProgressDrawTarget::stdout_with_hz(24));
 
       let style = ProgressStyle::with_template(&bar_style).unwrap().progress_chars("##-");
       progress_bar.set_style(style);
@@ -167,11 +147,7 @@ impl PhotonMap {
         progress_bar.set_position(num_complete as u64);
 
         let elapsed = progress_bar.elapsed().as_secs_f64();
-        let ratio = if num_complete == 0 {
-          num_photons as f64
-        } else {
-          (num_photons as f64) / (num_complete as f64)
-        };
+        let ratio = if num_complete == 0 { num_photons as f64 } else { (num_photons as f64) / (num_complete as f64) };
 
         let projected = Duration::from_secs_f64(elapsed * ratio);
         progress_bar.set_message(duration_to_hms(&projected));
@@ -195,8 +171,7 @@ impl PhotonMap {
 
     // Divide all powers by the number of emitted photons
     println!("Finalizing photon powers...");
-    let (mut photons, num_emitted) =
-      Arc::try_unwrap(photons_lock).unwrap().into_inner().unwrap().into();
+    let (mut photons, num_emitted) = Arc::try_unwrap(photons_lock).unwrap().into_inner().unwrap().into();
     let inverse_num_emitted = 1.0 / num_emitted as f32;
     for p in photons.iter_mut() {
       for c in p.power.iter_mut() {
@@ -219,11 +194,7 @@ impl PhotonMap {
       gigabytes
     );
 
-    Self {
-      kd_tree: KdTree3::par_build_by_key(photons, |photon, k| {
-        ordered_float::OrderedFloat(photon.position[k])
-      })
-    }
+    Self { kd_tree: KdTree3::par_build_by_key(photons, |photon, k| ordered_float::OrderedFloat(photon.position[k])) }
   }
 
   // /// Returns the nearest photons to point in the photon map, as well as the maximum squared
@@ -263,10 +234,8 @@ impl PhotonMap {
   /// Returns the nearest photons to point in the photon map, as well as the maximum squared
   /// distance between point and a nearest photon.
   pub fn find_within_radius(&self, point: &WorldPoint, radius: PositiveReal) -> Vec<Photon> {
-    let nearest_photons = self.kd_tree.within_radius(
-      &Into::<[f32; 3]>::into(point.into_inner().cast()),
-      radius.into_inner() as f32
-    );
+    let nearest_photons =
+      self.kd_tree.within_radius(&Into::<[f32; 3]>::into(point.into_inner().cast()), radius.into_inner() as f32);
 
     nearest_photons.into_iter().map(|p| Photon::from_packed(p.clone())).collect()
   }

@@ -58,11 +58,7 @@ pub struct SphereSurface {
 }
 
 impl ContinuousRandomVariable<(), (WorldRay, Color)> for SphereSurface {
-  fn sample_with_pdf(
-    &self,
-    _: &(),
-    sampler: &mut dyn Sampler
-  ) -> Option<((WorldRay, Color), PositiveReal)> {
+  fn sample_with_pdf(&self, _: &(), sampler: &mut dyn Sampler) -> Option<((WorldRay, Color), PositiveReal)> {
     self
       .material
       .emit_random_variable()
@@ -71,10 +67,7 @@ impl ContinuousRandomVariable<(), (WorldRay, Color)> for SphereSurface {
         let point = self.transformed_center + normal * self.transformed_radius.into_inner();
 
         rv.sample_with_pdf(&(point, normal), sampler).map(|((dir, light), pdf)| {
-          (
-            (Ray::new(point, dir), light * dir.dot(&normal).abs()),
-            pdf * self.inverse_transformed_area
-          )
+          ((Ray::new(point, dir), light * dir.dot(&normal).abs()), pdf * self.inverse_transformed_area)
         })
       })
       .flatten()
@@ -151,15 +144,10 @@ impl TransformedSurface for SphereSurface {
     ))
   }
 
-  fn emitted_ray_random_variable(&self) -> &dyn ContinuousRandomVariable<(), (WorldRay, Color)> {
-    self
-  }
+  fn emitted_ray_random_variable(&self) -> &dyn ContinuousRandomVariable<(), (WorldRay, Color)> { self }
 
   fn local_bounding_box(&self) -> BoundingBox3<Self::LocalSpace> {
-    BoundingBox3::new(
-      nalgebra::point![-1.0, -1.0, -1.0].into(),
-      nalgebra::point![1.0, 1.0, 1.0].into()
-    )
+    BoundingBox3::new(nalgebra::point![-1.0, -1.0, -1.0].into(), nalgebra::point![1.0, 1.0, 1.0].into())
   }
 
   fn num_subsurfaces(&self) -> usize { 1 }

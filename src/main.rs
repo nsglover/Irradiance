@@ -17,7 +17,9 @@ mod surfaces;
 mod textures;
 
 // Top Priority:
+// TODO: Undo any last minute hacks for the project
 // TODO: Any TODOs scattered throughout the code
+// TODO: Does glass need PMF? Does glass need ni^2/no^2?
 // TODO: BSDF SHOULD NOT RETURN COSINE TERM!!!
 // TODO: BSDF SHOULD USE MATHEMATICAL CONVENTIONS FOR INPUT DIRECTION (i.e. negate it!)
 // TODO: Split hit info into surface info and other stuff (like intersect time)
@@ -36,6 +38,7 @@ mod textures;
 // TODO: Even fancier integrators
 
 // Major Optimizations:
+// TODO: BVH should attempt to intersect the closer of its two children
 // TODO: Avoid dynamically transformed surfaces at all costs; only do this for sufficiently
 //       complex implicit surfaces which are invariant under linear transformation (not spheres)
 // TODO: Investigate the performance disparity and fix it
@@ -94,8 +97,7 @@ pub struct BuildSettings {
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
-  let Arguments { scene_file, image_file, subimage_edge_length, num_threads, no_progress_bar } =
-    Arguments::parse();
+  let Arguments { scene_file, image_file, subimage_edge_length, num_threads, no_progress_bar } = Arguments::parse();
 
   if num_threads == 0 {
     panic!("At least 1 thread is necessary to run the renderer!");
@@ -112,10 +114,7 @@ fn main() -> Result<(), Box<dyn Error>> {
   let build_time = std::time::Instant::now();
   let reader = BufReader::new(File::open(scene_file)?);
   let json = serde_json::from_reader(reader)?;
-  let renderer = Renderer::build_from_json(
-    json,
-    BuildSettings { num_threads, use_progress_bar: !no_progress_bar }
-  )?;
+  let renderer = Renderer::build_from_json(json, BuildSettings { num_threads, use_progress_bar: !no_progress_bar })?;
 
   println!("Building complete! Time: {}\n", duration_to_hms(&build_time.elapsed()));
 

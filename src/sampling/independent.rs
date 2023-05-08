@@ -21,13 +21,9 @@ impl Sampler for IndependentSampler {
     PositiveReal::new_unchecked(self.rng.sample(distributions::OpenClosed01))
   }
 
-  fn next_non_one(&mut self) -> PositiveReal {
-    PositiveReal::new_unchecked(self.rng.sample(distributions::Standard))
-  }
+  fn next_non_one(&mut self) -> PositiveReal { PositiveReal::new_unchecked(self.rng.sample(distributions::Standard)) }
 
-  fn next_interior(&mut self) -> PositiveReal {
-    PositiveReal::new_unchecked(self.rng.sample(distributions::Open01))
-  }
+  fn next_interior(&mut self) -> PositiveReal { PositiveReal::new_unchecked(self.rng.sample(distributions::Open01)) }
 
   fn random_in_closed_open(&mut self, min: Real, sup: Real) -> Real {
     self.rng.sample(distributions::Uniform::new(min, sup))

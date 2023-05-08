@@ -19,13 +19,9 @@ pub trait Sampler: Debug {
     min + self.next_non_one().into_inner() * (sup - min)
   }
 
-  fn random_in_closed(&mut self, min: Real, max: Real) -> Real {
-    min + self.next().into_inner() * (max - min)
-  }
+  fn random_in_closed(&mut self, min: Real, max: Real) -> Real { min + self.next().into_inner() * (max - min) }
 
-  fn random_in_open(&mut self, inf: Real, sup: Real) -> Real {
-    inf + self.next_interior().into_inner() * (sup - inf)
-  }
+  fn random_in_open(&mut self, inf: Real, sup: Real) -> Real { inf + self.next_interior().into_inner() * (sup - inf) }
 }
 
 // use nalgebra::{Const, ToTypenum};

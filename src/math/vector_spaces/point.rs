@@ -18,9 +18,7 @@ where Const<D>: ToTypenum
 impl<const D: usize, S: Space<D>> Point<D, S>
 where Const<D>: ToTypenum
 {
-  pub fn cast_unchecked<T: Space<D>>(self) -> Point<D, T> {
-    Point { inner: self.inner, _phantom: Phantom::default() }
-  }
+  pub fn cast_unchecked<T: Space<D>>(self) -> Point<D, T> { Point { inner: self.inner, _phantom: Phantom::default() } }
 
   pub fn origin() -> Self { Self::from(na::Point::origin()) }
 }
@@ -89,9 +87,7 @@ where Const<D>: ToTypenum
 {
   type Output = Point<D, S>;
 
-  fn add(self, rhs: Vector<D, S>) -> Self::Output {
-    Self { inner: self.inner + rhs.inner, _phantom: self._phantom }
-  }
+  fn add(self, rhs: Vector<D, S>) -> Self::Output { Self { inner: self.inner + rhs.inner, _phantom: self._phantom } }
 }
 
 impl<const D: usize, S: Space<D>> ops::Sub<Vector<D, S>> for Point<D, S>
@@ -99,9 +95,7 @@ where Const<D>: ToTypenum
 {
   type Output = Point<D, S>;
 
-  fn sub(self, rhs: Vector<D, S>) -> Self::Output {
-    Self { inner: self.inner - rhs.inner, _phantom: self._phantom }
-  }
+  fn sub(self, rhs: Vector<D, S>) -> Self::Output { Self { inner: self.inner - rhs.inner, _phantom: self._phantom } }
 }
 
 impl<const D: usize, S: Space<D>> ops::Sub<Point<D, S>> for Point<D, S>
@@ -117,9 +111,7 @@ where Const<D>: ToTypenum
 {
   type Output = Point<D, S>;
 
-  fn mul(self, rhs: Real) -> Self::Output {
-    Self { inner: self.inner * rhs, _phantom: self._phantom }
-  }
+  fn mul(self, rhs: Real) -> Self::Output { Self { inner: self.inner * rhs, _phantom: self._phantom } }
 }
 
 impl<const D: usize, S: Space<D>> ops::Div<Real> for Point<D, S>
@@ -127,9 +119,7 @@ where Const<D>: ToTypenum
 {
   type Output = Point<D, S>;
 
-  fn div(self, rhs: Real) -> Self::Output {
-    Self { inner: self.inner / rhs, _phantom: self._phantom }
-  }
+  fn div(self, rhs: Real) -> Self::Output { Self { inner: self.inner / rhs, _phantom: self._phantom } }
 }
 
 impl<const D: usize, S: Space<D>> ops::Index<usize> for Point<D, S>

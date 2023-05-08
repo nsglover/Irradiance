@@ -14,9 +14,7 @@ pub struct ImageTextureParameters {
 #[typetag::deserialize(name = "image")]
 impl TextureParameters for ImageTextureParameters {
   fn build_texture(&self) -> Arc<dyn Texture> {
-    Arc::new(ImageTexture {
-      image: Reader::open(&self.filename).unwrap().decode().unwrap().into_rgb8()
-    })
+    Arc::new(ImageTexture { image: Reader::open(&self.filename).unwrap().decode().unwrap().into_rgb8() })
   }
 }
 

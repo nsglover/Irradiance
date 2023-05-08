@@ -50,9 +50,7 @@ impl Color {
 
   pub fn b(&self) -> Real { self.inner.z }
 
-  pub fn luminance(&self) -> Real {
-    self.inner.x * 0.212671 + self.inner.y * 0.715160 + self.inner.z * 0.072169
-  }
+  pub fn luminance(&self) -> Real { self.inner.x * 0.212671 + self.inner.y * 0.715160 + self.inner.z * 0.072169 }
 
   pub fn bytes(&self) -> na::Vector3<u8> {
     let r = na::clamp(self.inner.x * 255.0, 0.0, 255.0);
@@ -64,13 +62,7 @@ impl Color {
 
   pub fn from_bytes(bytes: [u8; 3]) -> Self {
     let inv_255 = 1.0 / 255.0;
-    Self {
-      inner: na::vector![
-        bytes[0] as Real * inv_255,
-        bytes[1] as Real * inv_255,
-        bytes[2] as Real * inv_255
-      ]
-    }
+    Self { inner: na::vector![bytes[0] as Real * inv_255, bytes[1] as Real * inv_255, bytes[2] as Real * inv_255] }
   }
 }
 

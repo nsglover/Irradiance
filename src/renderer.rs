@@ -53,10 +53,7 @@ pub struct Renderer {
 type Image = ImageBuffer<Rgb<u8>, Vec<u8>>;
 
 impl Renderer {
-  pub fn build_from_json(
-    json: serde_json::Value,
-    settings: BuildSettings
-  ) -> Result<Renderer, Box<dyn Error>> {
+  pub fn build_from_json(json: serde_json::Value, settings: BuildSettings) -> Result<Renderer, Box<dyn Error>> {
     // Parse the scene from JSON
     let SceneParameters {
       samples_per_pixel,
@@ -76,10 +73,8 @@ impl Renderer {
     // Partition surfaces based on whether they are emissive
     let (emissive_surface_params, non_emissive_surface_params) =
       surface_params.into_iter().partition(|s| s.is_emissive(&materials));
-    let non_emissive_surface =
-      surfaces::default_grouping(non_emissive_surface_params, &materials, &meshes, settings);
-    let emissive_surface =
-      surfaces::default_grouping(emissive_surface_params, &materials, &meshes, settings);
+    let non_emissive_surface = surfaces::default_grouping(non_emissive_surface_params, &materials, &meshes, settings);
+    let emissive_surface = surfaces::default_grouping(emissive_surface_params, &materials, &meshes, settings);
 
     // Build the scene from the surface partition
     let scene = Scene::new(non_emissive_surface, emissive_surface);
@@ -136,10 +131,8 @@ impl Renderer {
       let bar_style = "[ {elapsed_precise} / {msg} ]: {bar:50.green/red} ".to_string()
         + &format!("{{pos:>{}}}/{{len}} subimages", (num_subimages as f64).log10().ceil() as usize);
 
-      let progress_bar = ProgressBar::with_draw_target(
-        Some(num_subimages as u64),
-        ProgressDrawTarget::stdout_with_hz(24)
-      );
+      let progress_bar =
+        ProgressBar::with_draw_target(Some(num_subimages as u64), ProgressDrawTarget::stdout_with_hz(24));
 
       let style = ProgressStyle::with_template(&bar_style).unwrap().progress_chars("##-");
       progress_bar.set_style(style);
@@ -168,11 +161,8 @@ impl Renderer {
         progress_bar.set_position(num_complete as u64);
 
         let elapsed = progress_bar.elapsed().as_secs_f64();
-        let ratio = if num_complete == 0 {
-          num_subimages as f64
-        } else {
-          (num_subimages as f64) / (num_complete as f64)
-        };
+        let ratio =
+          if num_complete == 0 { num_subimages as f64 } else { (num_subimages as f64) / (num_complete as f64) };
 
         let projected = Duration::from_secs_f64(elapsed * ratio);
         progress_bar.set_message(duration_to_hms(&projected));

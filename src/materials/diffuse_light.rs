@@ -23,10 +23,7 @@ impl MaterialParameters for DiffuseLightParameters {
   fn name(&self) -> String { self.name.clone() }
 
   fn build_material(&self) -> Arc<dyn Material> {
-    Arc::new(DiffuseLight {
-      light_color: self.emit.build_texture(),
-      light_intensity: self.intensity
-    })
+    Arc::new(DiffuseLight { light_color: self.emit.build_texture(), light_intensity: self.intensity })
   }
 }
 
@@ -36,9 +33,7 @@ pub struct DiffuseLight {
   light_intensity: Real
 }
 
-impl ContinuousRandomVariable<(WorldPoint, WorldUnitVector), (WorldUnitVector, Color)>
-  for DiffuseLight
-{
+impl ContinuousRandomVariable<(WorldPoint, WorldUnitVector), (WorldUnitVector, Color)> for DiffuseLight {
   fn sample_with_pdf(
     &self,
     (_, normal): &(WorldPoint, WorldUnitVector),
@@ -48,9 +43,8 @@ impl ContinuousRandomVariable<(WorldPoint, WorldUnitVector), (WorldUnitVector, C
     let dir = (normal.into_vector() + random).normalize();
 
     // TODO: Fix this asap; only works for constant textures
-    PositiveReal::new(dir.dot(&normal) / PI).map(|pdf| {
-      ((dir, self.light_color.value(&TextureCoordinate::zero()) * self.light_intensity), pdf)
-    })
+    PositiveReal::new(dir.dot(&normal) / PI)
+      .map(|pdf| ((dir, self.light_color.value(&TextureCoordinate::zero()) * self.light_intensity), pdf))
   }
 
   fn pdf(
@@ -77,8 +71,7 @@ impl Material for DiffuseLight {
 
   fn emit_random_variable(
     &self
-  ) -> Option<&dyn ContinuousRandomVariable<(WorldPoint, WorldUnitVector), (WorldUnitVector, Color)>>
-  {
+  ) -> Option<&dyn ContinuousRandomVariable<(WorldPoint, WorldUnitVector), (WorldUnitVector, Color)>> {
     Some(self)
   }
 }

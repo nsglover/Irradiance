@@ -2,8 +2,8 @@ use std::{collections::HashMap, fmt::Debug, sync::Arc};
 
 use super::Mesh;
 use crate::{
-  common::Wrapper, light::Color, materials::Material, math::*, raytracing::*,
-  sampling::ContinuousRandomVariable, BuildSettings
+  common::Wrapper, light::Color, materials::Material, math::*, raytracing::*, sampling::ContinuousRandomVariable,
+  BuildSettings
 };
 
 #[typetag::deserialize(tag = "type")]
@@ -19,10 +19,7 @@ pub trait SurfaceParameters: Debug {
 }
 
 pub trait Surface: Debug {
-  fn intersect_world_ray(
-    &self,
-    ray: &mut WorldRay
-  ) -> Option<(WorldRayIntersection, &dyn Material)>;
+  fn intersect_world_ray(&self, ray: &mut WorldRay) -> Option<(WorldRayIntersection, &dyn Material)>;
 
   fn emitted_ray_random_variable(&self) -> &dyn ContinuousRandomVariable<(), (WorldRay, Color)>;
 
@@ -50,10 +47,7 @@ pub trait TransformedSurface {
 
 // TODO: Move this to transform class
 impl<T: TransformedSurface + Debug> Surface for T {
-  fn intersect_world_ray(
-    &self,
-    ray: &mut WorldRay
-  ) -> Option<(WorldRayIntersection, &dyn Material)> {
+  fn intersect_world_ray(&self, ray: &mut WorldRay) -> Option<(WorldRayIntersection, &dyn Material)> {
     let tr = self.local_to_world();
     let mut local_ray = tr.inverse_ray(&ray);
     self.intersect_ray(&mut local_ray).map(|(local_hit, mat)| (tr.ray_intersect(&local_hit), mat))

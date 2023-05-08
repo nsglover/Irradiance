@@ -27,10 +27,7 @@ where Const<D>: ToTypenum
   }
 
   pub fn enclose_box(&mut self, other: &BoundingBox<D, S>) {
-    *self = Self::new(
-      self.min.inner.inf(&other.min.inner).into(),
-      self.max.inner.sup(&other.max.inner).into()
-    );
+    *self = Self::new(self.min.inner.inf(&other.min.inner).into(), self.max.inner.sup(&other.max.inner).into());
   }
 
   pub fn enclose_point(&mut self, point: &Point<D, S>) {

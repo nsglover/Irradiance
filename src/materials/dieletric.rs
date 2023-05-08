@@ -32,11 +32,7 @@ struct RefractRandomVariable {
 }
 
 impl DiscreteRandomVariable<WorldRayIntersection, WorldUnitVector> for RefractRandomVariable {
-  fn sample(
-    &self,
-    hit: &WorldRayIntersection,
-    sampler: &mut dyn Sampler
-  ) -> Option<WorldUnitVector> {
+  fn sample(&self, hit: &WorldRayIntersection, sampler: &mut dyn Sampler) -> Option<WorldUnitVector> {
     let dir = hit.intersect_direction;
 
     // Ensure normal and IOR are correctly oriented (i.e. for whether ray is entering or exiting)
@@ -88,8 +84,7 @@ fn refract<S: Space<3>>(
   let discriminant = 1.0 - ior_in_out_ratio * ior_in_out_ratio * (1.0 - dt * dt);
   (discriminant > 0.0).then(|| {
     let cos_theta_out = discriminant.sqrt();
-    let refracted_dir = (Vector::from(d.inner().into_inner() - normal.inner().into_inner() * dt)
-      * ior_in_out_ratio
+    let refracted_dir = (Vector::from(d.inner().into_inner() - normal.inner().into_inner() * dt) * ior_in_out_ratio
       - normal * cos_theta_out)
       .normalize();
     (refracted_dir, cos_theta_out)
@@ -100,17 +95,15 @@ impl Material for Dieletric {
   fn emitted(&self, _: &WorldRayIntersection) -> Option<Color> { None }
 
   fn bsdf(&self, hit: &WorldRayIntersection, _: &WorldUnitVector) -> Color {
+    // TODO: Do we need to multiply by (1 - Fr)? If so, I should introduce a PMF
     self.albedo.value(&hit.tex_coords)
   }
 
-  fn scatter_random_variable(&self) -> Option<&ScatterRandomVariable> {
-    Some(&self.scatter_random_var)
-  }
+  fn scatter_random_variable(&self) -> Option<&ScatterRandomVariable> { Some(&self.scatter_random_var) }
 
   fn emit_random_variable(
     &self
-  ) -> Option<&dyn ContinuousRandomVariable<(WorldPoint, WorldUnitVector), (WorldUnitVector, Color)>>
-  {
+  ) -> Option<&dyn ContinuousRandomVariable<(WorldPoint, WorldUnitVector), (WorldUnitVector, Color)>> {
     None
   }
 }

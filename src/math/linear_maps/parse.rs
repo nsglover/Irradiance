@@ -19,22 +19,15 @@ pub enum SingleTransformParameters {
 impl SingleTransformParameters {
   pub fn build_matrix(self) -> na::Matrix4<Real> {
     match self {
-      SingleTransformParameters::Translate { translate } => {
-        na::Matrix4::new_translation(&array_to_vec(translate))
-      },
+      SingleTransformParameters::Translate { translate } => na::Matrix4::new_translation(&array_to_vec(translate)),
       SingleTransformParameters::UniformScale { scale } => na::Matrix4::new_scaling(scale),
-      SingleTransformParameters::NonUniformScale { scale } => {
-        na::Matrix4::new_nonuniform_scaling(&array_to_vec(scale))
+      SingleTransformParameters::NonUniformScale { scale } => na::Matrix4::new_nonuniform_scaling(&array_to_vec(scale)),
+      SingleTransformParameters::AxisAngle { axis, angle } => {
+        na::Matrix4::from_axis_angle(&na::Unit::new_normalize(array_to_vec(axis)), angle * PI / 180.0)
       },
-      SingleTransformParameters::AxisAngle { axis, angle } => na::Matrix4::from_axis_angle(
-        &na::Unit::new_normalize(array_to_vec(axis)),
-        angle * PI / 180.0
-      ),
-      SingleTransformParameters::LookAt { from, at, up } => na::Matrix4::look_at_rh(
-        &array_to_vec(from).into(),
-        &array_to_vec(at).into(),
-        &array_to_vec(up)
-      )
+      SingleTransformParameters::LookAt { from, at, up } => {
+        na::Matrix4::look_at_rh(&array_to_vec(from).into(), &array_to_vec(at).into(), &array_to_vec(up))
+      },
     }
   }
 }
@@ -130,9 +123,7 @@ impl TransformParameters {
   //   }
   // }
 
-  pub fn build_transform<In: Space<3> + 'static, Out: Space<3> + 'static>(
-    self
-  ) -> Box<dyn Transform<In, Out>> {
+  pub fn build_transform<In: Space<3> + 'static, Out: Space<3> + 'static>(self) -> Box<dyn Transform<In, Out>> {
     match self {
       TransformParameters::Single(m) => Self::build_matrix_transform(vec![m]),
       TransformParameters::Composed(ms) => Self::build_matrix_transform(ms)

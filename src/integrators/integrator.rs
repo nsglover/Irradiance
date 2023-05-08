@@ -1,8 +1,6 @@
 use std::{error::Error, fmt::Debug};
 
-use crate::{
-  light::*, math::PositiveReal, raytracing::*, sampling::Sampler, scene::Scene, BuildSettings
-};
+use crate::{light::*, math::PositiveReal, raytracing::*, sampling::Sampler, scene::Scene, BuildSettings};
 
 #[typetag::deserialize(tag = "type")]
 pub trait IntegratorParameters: Debug {

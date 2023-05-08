@@ -30,9 +30,7 @@ where na::Const<D>: na::ToTypenum
     s
   }
 
-  pub fn reflect_about(&self, normal: UnitVector<D, S>) -> Self {
-    normal * 2.0 * self.dot(&normal.into()) - *self
-  }
+  pub fn reflect_about(&self, normal: UnitVector<D, S>) -> Self { normal * 2.0 * self.dot(&normal.into()) - *self }
 }
 
 impl<S: Space<3>> Vector<3, S> {
@@ -42,9 +40,7 @@ impl<S: Space<3>> Vector<3, S> {
 impl<const D: usize, S: Space<D>> VectorLike<D, S> for Vector<D, S>
 where na::Const<D>: na::ToTypenum
 {
-  fn from_raw(raw: na::SVector<Real, D>) -> Self {
-    Self { inner: raw, _phantom: Phantom::default() }
-  }
+  fn from_raw(raw: na::SVector<Real, D>) -> Self { Self { inner: raw, _phantom: Phantom::default() } }
 
   fn from_vector(vector: Vector<D, S>) -> Self { vector }
 
@@ -75,9 +71,7 @@ where na::Const<D>: na::ToTypenum
 {
   type Output = Self;
 
-  fn add(self, rhs: Self) -> Self::Output {
-    Self { inner: self.inner + rhs.inner, _phantom: self._phantom }
-  }
+  fn add(self, rhs: Self) -> Self::Output { Self { inner: self.inner + rhs.inner, _phantom: self._phantom } }
 }
 
 impl<const D: usize, S: Space<D>> std::ops::AddAssign for Vector<D, S>
@@ -91,9 +85,7 @@ where na::Const<D>: na::ToTypenum
 {
   type Output = Self;
 
-  fn sub(self, rhs: Self) -> Self::Output {
-    Self { inner: self.inner - rhs.inner, _phantom: self._phantom }
-  }
+  fn sub(self, rhs: Self) -> Self::Output { Self { inner: self.inner - rhs.inner, _phantom: self._phantom } }
 }
 
 impl<const D: usize, S: Space<D>> std::ops::SubAssign for Vector<D, S>

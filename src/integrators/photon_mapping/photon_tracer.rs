@@ -50,10 +50,8 @@ impl IntegratorParameters for PhotonTracerParameters {
         radius: PositiveReal::new_unchecked(radius),
         kernel_area: PositiveReal::new_unchecked(PI * radius * radius),
         scene: scene.clone(),
-        path_termination_probability: PositiveReal::new_unchecked(
-          1.0 / (self.average_path_length as Real)
-        ),
-        background: Color::from_bytes([200, 230, 255]) / 4.0
+        path_termination_probability: PositiveReal::new_unchecked(1.0 / (self.average_path_length as Real)),
+        background: Color::black()
       }) as Box<dyn Integrator>);
 
       let i = i as Real;
@@ -119,15 +117,7 @@ impl PathTraceIntegrator for PhotonTracer {
       let radiance_emitted = material.emitted(&hit).unwrap_or(Color::black());
       if let Some(scatter_rv) = material.scatter_random_variable() {
         match scatter_rv {
-          ScatterRandomVariable::Continuous(rv) => {
-            if let Some((dir, pdf)) = rv.sample_with_pdf(&hit, sampler) {
-              let ray = Ray::new(hit.intersect_point, dir);
-              if let None = self.scene.intersect_world_ray(ray) {
-                let bsdf = material.bsdf(&hit, &dir);
-                return Err(radiance_emitted + self.background * bsdf / pdf.into_inner());
-              }
-            }
-
+          ScatterRandomVariable::Continuous(_) => {
             let photons = self.photon_map.find_within_radius(&hit.intersect_point, self.radius);
             let out_dir = -hit.intersect_direction;
             let cos = out_dir.dot(&hit.geometric_normal).abs();
@@ -141,11 +131,6 @@ impl PathTraceIntegrator for PhotonTracer {
               hit.intersect_direction = photon.direction;
               let bsdf = material.bsdf(&hit, &out_dir) / cos;
               incoming_estimate += bsdf * photon.power;
-            }
-
-            let l = incoming_estimate.luminance();
-            if l > 1000.0 {
-              println!("{:?}", incoming_estimate);
             }
 
             return Err(radiance_emitted + incoming_estimate / self.kernel_area.into_inner());

@@ -24,9 +24,7 @@ pub struct PackedPhoton {
 }
 
 impl Photon {
-  pub fn from_ray(ray: &WorldRay, power: Color) -> Self {
-    Self { position: ray.origin(), direction: ray.dir(), power }
-  }
+  pub fn from_ray(ray: &WorldRay, power: Color) -> Self { Self { position: ray.origin(), direction: ray.dir(), power } }
 
   pub fn into_packed(self) -> PackedPhoton {
     let p = self.position;
@@ -45,8 +43,7 @@ impl Photon {
     let c = packed.power;
     Self {
       position: WorldPoint::from_array([p[0] as Real, p[1] as Real, p[2] as Real]),
-      direction: WorldVector::from_array([d[0] as Real, d[1] as Real, d[2] as Real])
-        .normalize_fast(),
+      direction: WorldVector::from_array([d[0] as Real, d[1] as Real, d[2] as Real]).normalize_fast(),
       power: Color::new(c[0] as Real, c[1] as Real, c[2] as Real)
     }
   }

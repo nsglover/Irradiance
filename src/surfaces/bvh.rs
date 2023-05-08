@@ -6,8 +6,8 @@ use serde_derive::Deserialize;
 
 use super::{emission::UniformChoiceEmittedRayRandomVariable, surface_list::*, *};
 use crate::{
-  duration_to_hms, light::Color, materials::Material, math::*, raytracing::*,
-  sampling::ContinuousRandomVariable, surfaces::Surface, BuildSettings
+  duration_to_hms, light::Color, materials::Material, math::*, raytracing::*, sampling::ContinuousRandomVariable,
+  surfaces::Surface, BuildSettings
 };
 
 #[derive(Debug, Clone, Copy, Deserialize)]
@@ -82,11 +82,7 @@ impl BvhNode {
               maybe_hit
             },
             (Some(left_hit), Some(right_hit)) => {
-              let hit = if left_hit.0.intersect_time < right_hit.0.intersect_time {
-                left_hit
-              } else {
-                right_hit
-              };
+              let hit = if left_hit.0.intersect_time < right_hit.0.intersect_time { left_hit } else { right_hit };
 
               ray.set_max_intersect_time(hit.0.intersect_time);
               Some(hit)
@@ -187,8 +183,7 @@ impl BoundingVolumeHierarchy {
                 num_right += buckets[i].1;
               }
 
-              let cost = (num_left as Real) * left_box.surface_area()
-                + (num_right as Real) * right_box.surface_area();
+              let cost = (num_left as Real) * left_box.surface_area() + (num_right as Real) * right_box.surface_area();
               let boundary = bounding_box.min()[axis] + (idx as Real) * bucket_width;
 
               if cost < split_cost {
@@ -200,9 +195,8 @@ impl BoundingVolumeHierarchy {
           }
 
           let axis = split_axis.unwrap_or(0);
-          (left_surfaces, right_surfaces) = surfaces
-            .into_iter()
-            .partition(|s| s.world_bounding_box().center()[axis] < split_boundary);
+          (left_surfaces, right_surfaces) =
+            surfaces.into_iter().partition(|s| s.world_bounding_box().center()[axis] < split_boundary);
 
           if left_surfaces.len() == 0 {
             let mut right_iter = right_surfaces.into_iter();
@@ -219,8 +213,7 @@ impl BoundingVolumeHierarchy {
           let num_left = num_surfaces / 2;
 
           surfaces.sort_by(|s1, s2| {
-            s1.world_bounding_box().center()[axis]
-              .total_cmp(&(s2.world_bounding_box().center()[axis]))
+            s1.world_bounding_box().center()[axis].total_cmp(&(s2.world_bounding_box().center()[axis]))
           });
 
           let mut surfaces_iter = surfaces.into_iter();
@@ -230,19 +223,9 @@ impl BoundingVolumeHierarchy {
         }
       };
 
-      left = Self::build_node(
-        left_surfaces,
-        partition_strategy,
-        max_leaf_primitives,
-        maybe_progress_bar.clone()
-      );
+      left = Self::build_node(left_surfaces, partition_strategy, max_leaf_primitives, maybe_progress_bar.clone());
 
-      right = Self::build_node(
-        right_surfaces,
-        partition_strategy,
-        max_leaf_primitives,
-        maybe_progress_bar
-      );
+      right = Self::build_node(right_surfaces, partition_strategy, max_leaf_primitives, maybe_progress_bar);
 
       let mut leaves = left.as_ref().map(|p| p.1.clone()).unwrap_or_default();
       leaves.append(&mut right.as_ref().map(|p| p.1.clone()).unwrap_or_default());
@@ -270,10 +253,8 @@ impl BoundingVolumeHierarchy {
       let bar_style = "[ {elapsed_precise} / {msg} ]: {bar:50.blue/yellow} ".to_string()
         + &format!("{{pos:>{}}}/{{len}} surfaces", (surfaces.len() as f64).log10().ceil() as usize);
 
-      let progress_bar = ProgressBar::with_draw_target(
-        Some(surfaces.len() as u64),
-        ProgressDrawTarget::stdout_with_hz(24)
-      );
+      let progress_bar =
+        ProgressBar::with_draw_target(Some(surfaces.len() as u64), ProgressDrawTarget::stdout_with_hz(24));
 
       let style = ProgressStyle::with_template(&bar_style).unwrap().progress_chars("##-");
       progress_bar.set_style(style);
@@ -281,13 +262,8 @@ impl BoundingVolumeHierarchy {
       progress_bar
     });
 
-    let (root_node, leaves) = Self::build_node(
-      surfaces,
-      partition_strategy,
-      max_leaf_primitives,
-      maybe_progress_bar.clone()
-    )
-    .unwrap();
+    let (root_node, leaves) =
+      Self::build_node(surfaces, partition_strategy, max_leaf_primitives, maybe_progress_bar.clone()).unwrap();
 
     let s = Self {
       root_node,
@@ -305,10 +281,7 @@ impl BoundingVolumeHierarchy {
 }
 
 impl Surface for BoundingVolumeHierarchy {
-  fn intersect_world_ray(
-    &self,
-    ray: &mut WorldRay
-  ) -> Option<(WorldRayIntersection, &dyn Material)> {
+  fn intersect_world_ray(&self, ray: &mut WorldRay) -> Option<(WorldRayIntersection, &dyn Material)> {
     self.root_node.intersect(ray)
   }
 

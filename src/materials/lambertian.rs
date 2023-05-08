@@ -60,18 +60,14 @@ impl Material for Lambertian {
   fn emitted(&self, _: &WorldRayIntersection) -> Option<Color> { None }
 
   fn bsdf(&self, hit: &WorldRayIntersection, sample: &WorldUnitVector) -> Color {
-    self.albedo.value(&hit.tex_coords)
-      * ((sample.dot(&hit.geometric_normal) / PI).abs() * self.intensity)
+    self.albedo.value(&hit.tex_coords) * ((sample.dot(&hit.geometric_normal) / PI).abs() * self.intensity)
   }
 
-  fn scatter_random_variable(&self) -> Option<&ScatterRandomVariable> {
-    Some(&self.scatter_random_var)
-  }
+  fn scatter_random_variable(&self) -> Option<&ScatterRandomVariable> { Some(&self.scatter_random_var) }
 
   fn emit_random_variable(
     &self
-  ) -> Option<&dyn ContinuousRandomVariable<(WorldPoint, WorldUnitVector), (WorldUnitVector, Color)>>
-  {
+  ) -> Option<&dyn ContinuousRandomVariable<(WorldPoint, WorldUnitVector), (WorldUnitVector, Color)>> {
     None
   }
 }

@@ -27,9 +27,7 @@ impl IntegratorParameters for Parameters {
   ) -> Result<Vec<Box<dyn Integrator>>, Box<dyn std::error::Error>> {
     Ok(vec![Box::new(MaterialPathTracer {
       scene,
-      path_termination_probability: PositiveReal::new_unchecked(
-        1.0 / (self.average_path_length as Real)
-      ),
+      path_termination_probability: PositiveReal::new_unchecked(1.0 / (self.average_path_length as Real)),
       background: Color::black()
     })])
   }
@@ -67,12 +65,7 @@ impl PathTraceIntegrator for MaterialPathTracer {
           },
           ScatterRandomVariable::Discrete(rv) => {
             if let Some(sample) = rv.sample(&hit, sampler) {
-              return Ok((
-                radiance_emitted,
-                material.bsdf(&hit, &sample),
-                Ray::new(hit.intersect_point, sample),
-                None
-              ));
+              return Ok((radiance_emitted, material.bsdf(&hit, &sample), Ray::new(hit.intersect_point, sample), None));
             }
           },
         }
