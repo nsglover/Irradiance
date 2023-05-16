@@ -54,7 +54,7 @@ impl SurfaceParameters for BvhParameters {
 
 #[derive(Debug)]
 enum BvhNodeType {
-  Leaf(Arc<SurfaceList>),
+  Leaf(Arc<SurfaceList<NoBoxCheck>>),
   Node(Option<Box<BvhNode>>, Option<Box<BvhNode>>)
 }
 
@@ -65,8 +65,8 @@ struct BvhNode {
 }
 
 impl BvhNode {
-  fn intersect(&self, ray: &mut WorldRay) -> Option<(WorldRayIntersection, &dyn Material)> {
-    if self.bounding_box.ray_intersects_fast(&ray) {
+  fn intersect(&self, ray: &mut WorldRay) -> Option<WorldSurfaceInterface> {
+    if self.bounding_box.ray_intersects(&ray) {
       match &self.node_type {
         BvhNodeType::Leaf(surface_list) => surface_list.intersect_world_ray(ray),
         BvhNodeType::Node(maybe_left, maybe_right) => {
@@ -75,16 +75,15 @@ impl BvhNode {
             maybe_right.as_ref().and_then(|right| right.intersect(ray))
           ) {
             (None, maybe_hit) | (maybe_hit, None) => {
-              if let Some((hit, _)) = maybe_hit.as_ref() {
-                ray.set_max_intersect_time(hit.intersect_time);
+              if let Some(hit) = maybe_hit.as_ref() {
+                ray.set_max_intersect_time(hit.time);
               }
 
               maybe_hit
             },
             (Some(left_hit), Some(right_hit)) => {
-              let hit = if left_hit.0.intersect_time < right_hit.0.intersect_time { left_hit } else { right_hit };
-
-              ray.set_max_intersect_time(hit.0.intersect_time);
+              let hit = if left_hit.time < right_hit.time { left_hit } else { right_hit };
+              ray.set_max_intersect_time(hit.time);
               Some(hit)
             }
           }
@@ -108,7 +107,7 @@ impl BoundingVolumeHierarchy {
     partition_strategy: PartitionStrategy,
     max_leaf_primitives: usize,
     maybe_progress_bar: Option<ProgressBar>
-  ) -> Option<(BvhNode, Vec<Arc<SurfaceList>>)> {
+  ) -> Option<(BvhNode, Vec<Arc<SurfaceList<NoBoxCheck>>>)> {
     let num_surfaces = surfaces.len();
     let bounding_boxes: Vec<_> = surfaces.iter().map(|s| s.world_bounding_box()).collect();
     let bounding_box = bounding_boxes.iter().fold(WorldBoundingBox::default(), |mut acc, bbox| {
@@ -136,8 +135,8 @@ impl BoundingVolumeHierarchy {
         Some((BvhNode { bounding_box, node_type: BvhNodeType::Leaf(leaf.clone()) }, vec![leaf]))
       }
     } else {
-      let left: Option<(BvhNode, Vec<Arc<SurfaceList>>)>;
-      let right: Option<(BvhNode, Vec<Arc<SurfaceList>>)>;
+      let left: Option<(BvhNode, Vec<Arc<SurfaceList<NoBoxCheck>>>)>;
+      let right: Option<(BvhNode, Vec<Arc<SurfaceList<NoBoxCheck>>>)>;
       match partition_strategy {
         PartitionStrategy::SurfaceAreaHeuristic => {
           const NUM_BUCKETS: usize = 12;
@@ -281,13 +280,11 @@ impl BoundingVolumeHierarchy {
 }
 
 impl Surface for BoundingVolumeHierarchy {
-  fn intersect_world_ray(&self, ray: &mut WorldRay) -> Option<(WorldRayIntersection, &dyn Material)> {
-    self.root_node.intersect(ray)
-  }
+  fn intersect_world_ray(&self, ray: &mut WorldRay) -> Option<WorldSurfaceInterface> { self.root_node.intersect(ray) }
 
   fn world_bounding_box(&self) -> WorldBoundingBox { self.root_node.bounding_box.clone() }
 
-  fn emitted_ray_random_variable(&self) -> &dyn ContinuousRandomVariable<(), (WorldRay, Color)> {
+  fn emitted_ray_random_variable(&self) -> &dyn ContinuousRandomVariable<Param = (), Sample = (WorldRay, Color)> {
     &self.emitted_ray_random_var
   }
 

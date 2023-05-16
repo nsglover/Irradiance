@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{ops::Neg, sync::Arc};
 
 use serde::Deserialize;
 
@@ -19,7 +19,7 @@ impl MaterialParameters for DieletricParameters {
   fn build_material(&self) -> Arc<dyn Material> {
     Arc::new(Dieletric {
       albedo: self.albedo.build_texture(),
-      scatter_random_var: ScatterRandomVariable::Discrete(Box::new(RefractRandomVariable {
+      scatter_random_var: ScatterRandomVariable::Specular(Box::new(RefractRandomVariable {
         index_of_refraction: self.ior
       }))
     })
@@ -31,23 +31,28 @@ struct RefractRandomVariable {
   index_of_refraction: Real
 }
 
-impl DiscreteRandomVariable<WorldRayIntersection, WorldUnitVector> for RefractRandomVariable {
-  fn sample(&self, hit: &WorldRayIntersection, sampler: &mut dyn Sampler) -> Option<WorldUnitVector> {
-    let dir = hit.intersect_direction;
+impl DiscreteRandomVariable for RefractRandomVariable {
+  type Param = (WorldSurfacePoint, WorldUnitVector);
+  type Sample = WorldUnitVector;
 
+  fn sample(
+    &self,
+    (hit, out_dir): &(WorldSurfacePoint, WorldUnitVector),
+    sampler: &mut dyn Sampler
+  ) -> Option<WorldUnitVector> {
     // Ensure normal and IOR are correctly oriented (i.e. for whether ray is entering or exiting)
     let mut normal = hit.geometric_normal;
     let mut eta_in = 1.0;
     let mut eta_out = self.index_of_refraction;
-    if dir.dot(&hit.geometric_normal) > 0.0 {
+    if out_dir.dot(&normal) < 0.0 {
       normal = -normal;
       std::mem::swap(&mut eta_in, &mut eta_out);
     }
 
-    let cos_theta_in = -dir.dot(&normal);
-    let reflected = -dir.reflect_about(hit.geometric_normal);
+    let cos_theta_in = out_dir.dot(&normal);
+    let reflected = out_dir.reflect_about(normal);
     let scattered_dir;
-    if let Some((refracted, cos_theta_out)) = refract(dir, normal, eta_in / eta_out) {
+    if let Some((refracted, cos_theta_out)) = refract(out_dir, normal, eta_in / eta_out) {
       // Compute Fresnel coefficient (probability of reflection)
       let eta_out_cos_in = eta_out * cos_theta_in;
       let eta_in_cos_out = eta_in * cos_theta_out;
@@ -76,10 +81,11 @@ pub struct Dieletric {
 
 // TODO: Document this and move it to math module
 fn refract<S: Space<3>>(
-  d: UnitVector3<S>,
+  d: &UnitVector3<S>,
   normal: UnitVector3<S>,
   ior_in_out_ratio: Real
 ) -> Option<(UnitVector3<S>, Real)> {
+  let d = d.neg();
   let dt = d.dot(&normal);
   let discriminant = 1.0 - ior_in_out_ratio * ior_in_out_ratio * (1.0 - dt * dt);
   (discriminant > 0.0).then(|| {
@@ -92,18 +98,19 @@ fn refract<S: Space<3>>(
 }
 
 impl Material for Dieletric {
-  fn emitted(&self, _: &WorldRayIntersection) -> Option<Color> { None }
+  fn emitted(&self, _: &WorldSurfaceInterface) -> Option<Color> { None }
 
-  fn bsdf(&self, hit: &WorldRayIntersection, _: &WorldUnitVector) -> Color {
-    // TODO: Do we need to multiply by (1 - Fr)? If so, I should introduce a PMF
-    self.albedo.value(&hit.tex_coords)
+  fn bsdf_cos(&self, hit: &WorldSurfacePoint, _: &WorldUnitVector, _: &WorldUnitVector) -> Color {
+    // TODO: Do we need to multiply by Fr or (1 - Fr)? If so, I should introduce a PMF
+    self.albedo.value(&hit.tex_coord)
   }
 
   fn scatter_random_variable(&self) -> Option<&ScatterRandomVariable> { Some(&self.scatter_random_var) }
 
   fn emit_random_variable(
     &self
-  ) -> Option<&dyn ContinuousRandomVariable<(WorldPoint, WorldUnitVector), (WorldUnitVector, Color)>> {
+  ) -> Option<&dyn ContinuousRandomVariable<Param = (WorldPoint, WorldUnitVector), Sample = (WorldUnitVector, Color)>>
+  {
     None
   }
 }

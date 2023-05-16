@@ -1,26 +1,20 @@
-use crate::{math::*, textures::TextureCoordinate};
+use crate::{materials::Material, math::*, textures::TextureCoordinate};
 
 #[derive(Debug, Clone)]
-pub struct RayIntersection<S: Space<3>> {
-  pub intersect_point: Point3<S>,
-  pub intersect_direction: UnitVector3<S>,
+pub struct SurfacePoint<S: Space<3>> {
+  pub point: Point3<S>,
   pub geometric_normal: UnitVector3<S>,
-  // pub shading_normal: UnitVector3<S>,
-  pub intersect_time: PositiveReal,
-  pub tex_coords: TextureCoordinate
+  pub shading_normal: UnitVector3<S>,
+  pub tex_coord: TextureCoordinate
 }
 
-impl<S: Space<3>> RayIntersection<S> {
-  pub fn cast_unchecked<T: Space<3>>(&self) -> RayIntersection<T> {
-    RayIntersection {
-      intersect_point: self.intersect_point.cast_unchecked(),
-      intersect_direction: self.intersect_direction.cast_unchecked(),
-      geometric_normal: self.geometric_normal.cast_unchecked(),
-      // shading_normal: self.shading_normal.cast_unchecked(),
-      intersect_time: self.intersect_time,
-      tex_coords: self.tex_coords
-    }
-  }
+pub type WorldSurfacePoint = SurfacePoint<WorldSpace>;
+
+#[derive(Debug, Clone)]
+pub struct SurfaceInterface<'a, S: Space<3>> {
+  pub surface_point: SurfacePoint<S>,
+  pub material: &'a dyn Material,
+  pub time: PositiveReal
 }
 
-pub type WorldRayIntersection = RayIntersection<WorldSpace>;
+pub type WorldSurfaceInterface<'a> = SurfaceInterface<'a, WorldSpace>;

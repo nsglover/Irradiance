@@ -1,4 +1,4 @@
-use crate::{materials::Material, raytracing::*, surfaces::Surface};
+use crate::{raytracing::*, surfaces::Surface};
 
 const NUM_PARTS: usize = 2;
 
@@ -13,11 +13,11 @@ impl Scene {
     Self { surface_partition: [non_emissive_part, emissive_part] }
   }
 
-  pub fn intersect_world_ray(&self, mut ray: WorldRay) -> Option<(WorldRayIntersection, &dyn Material)> {
+  pub fn intersect_world_ray(&self, mut ray: WorldRay) -> Option<WorldSurfaceInterface> {
     let mut closest = None;
     for p in 0..NUM_PARTS {
       if let Some(hit) = self.surface_partition[p].intersect_world_ray(&mut ray) {
-        ray.set_max_intersect_time(hit.0.intersect_time);
+        ray.set_max_intersect_time(hit.time);
         closest = Some(hit);
       }
     }

@@ -69,40 +69,6 @@ where Const<D>: ToTypenum
   pub fn max(&self) -> Point<D, S> { self.max }
 }
 
-impl<S: Space<3>> BoundingBox<3, S> {
-  pub fn ray_intersects_fast(&self, ray: &Ray<3, S>) -> bool {
-    let (min_t, max_t) = ray.time_bounds();
-    let (mut min_t, mut max_t) = (min_t.into_inner(), max_t.into_inner());
-    let origin = ray.origin().into_inner();
-    let dir = ray.dir().into_inner();
-
-    // Macro for checking intersection along a given axis
-    macro_rules! check_axis {
-      ($a:ident) => {
-        let inv_d = 1.0 / dir.$a;
-        let mut t0 = (self.min.inner.$a - origin.$a) * inv_d;
-        let mut t1 = (self.max.inner.$a - origin.$a) * inv_d;
-        if inv_d < 0.0 {
-          std::mem::swap(&mut t0, &mut t1);
-        }
-
-        min_t = if t0 > min_t { t0 } else { min_t };
-        max_t = if t1 < max_t { t1 } else { max_t };
-
-        if max_t < min_t {
-          return false;
-        }
-      };
-    }
-
-    check_axis!(x);
-    check_axis!(y);
-    check_axis!(z);
-
-    true
-  }
-}
-
 impl<const D: usize, S: Space<D>> Default for BoundingBox<D, S>
 where Const<D>: ToTypenum
 {

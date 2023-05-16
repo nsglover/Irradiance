@@ -22,10 +22,10 @@ pub struct CameraParameters {
   #[serde(default = "default_resolution")]
   resolution: (u32, u32),
 
-  #[serde(alias = "vfov", default = "default_field_of_view")]
+  #[serde(alias = "field-of-view", default = "default_field_of_view")]
   field_of_view: Real,
 
-  #[serde(alias = "fdist", default = "default_focal_distance")]
+  #[serde(alias = "focal-distance", default = "default_focal_distance")]
   focal_distance: Real,
 
   #[serde(alias = "aperture", default = "default_aperture_radius")]

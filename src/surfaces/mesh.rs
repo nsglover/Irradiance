@@ -4,11 +4,7 @@ use serde::Deserialize;
 use tobj::LoadOptions;
 
 use super::triangle::TriangleSurface;
-use crate::{
-  materials::Material,
-  math::{LocalToWorld, Point3, Space, VectorLike, WorldPoint, WorldUnitVector},
-  textures::TextureCoordinate
-};
+use crate::{materials::Material, math::*, textures::TextureCoordinate};
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct MeshParameters {
@@ -19,7 +15,7 @@ pub struct MeshParameters {
 impl MeshParameters {
   pub fn build_mesh(self) -> (String, Mesh) {
     println!("Loading mesh from \"{}\"...", self.filename);
-    let mut raw_mesh = tobj::load_obj(
+    let mut raw_meshes = tobj::load_obj(
       self.filename,
       &LoadOptions {
         single_index: false,
@@ -32,49 +28,76 @@ impl MeshParameters {
     .expect("Mesh file not found!")
     .0;
 
-    if raw_mesh.len() != 1 {
+    // TODO: Replace this panic and many others with proper error handling
+    if raw_meshes.len() != 1 {
       panic!("Meshes with more than one model are not currently supporsed!")
     }
 
-    let raw_mesh = raw_mesh.remove(0).mesh;
+    let raw_mesh = raw_meshes.remove(0).mesh;
+    if raw_mesh.indices.len() % 3 != 0 {
+      panic!("Faces are not triangulated!")
+    }
 
-    // println!("{}", raw_mesh.indices.len());
-    // println!("{}", raw_mesh.texcoord_indices.len());
-    // println!("{}", raw_mesh.normal_indices.len());
+    let vertices = raw_mesh
+      .positions
+      .chunks_exact(3)
+      .map(|chunk| {
+        if let [x, y, z] = *chunk {
+          Point::from_array([x as Real, y as Real, z as Real])
+        } else {
+          panic!("chunks_exact didn't work!");
+        }
+      })
+      .collect();
 
-    // let idx = raw_mesh.indices[2] as usize;
-    // println!(
-    //   "{}: {} {} {}",
-    //   idx,
-    //   raw_mesh.positions[3 * idx],
-    //   raw_mesh.positions[3 * idx + 1],
-    //   raw_mesh.positions[3 * idx + 2]
-    // );
+    let vertex_normals = if raw_mesh.normal_indices.len() == 0 {
+      None
+    } else {
+      Some((
+        raw_mesh.normal_indices.into_iter().map(|i| i as usize).collect(),
+        raw_mesh
+          .normals
+          .chunks_exact(3)
+          .map(|chunk| {
+            if let [x, y, z] = *chunk {
+              UnitVector::from_array([x as Real, y as Real, z as Real])
+            } else {
+              panic!("chunks_exact didn't work!");
+            }
+          })
+          .collect()
+      ))
+    };
 
-    // let idx = raw_mesh.texcoord_indices[2] as usize;
-    // println!("{}: {} {} ", idx, raw_mesh.texcoords[2 * idx], raw_mesh.texcoords[2 * idx + 1]);
-
-    // println!("{}", raw_mesh.positions.len());
-    // println!("{}", raw_mesh.texcoords.len());
-    // println!("{}", raw_mesh.normals.len());
+    let vertex_tex_coords = if raw_mesh.texcoord_indices.len() == 0 {
+      None
+    } else {
+      Some((
+        raw_mesh.texcoord_indices.into_iter().map(|i| i as usize).collect(),
+        raw_mesh
+          .texcoords
+          .chunks_exact(2)
+          .map(|chunk| {
+            if let [x, y] = *chunk {
+              TextureCoordinate::from_array([x as Real, y as Real])
+            } else {
+              panic!("chunks_exact didn't work!");
+            }
+          })
+          .collect()
+      ))
+    };
 
     (
       self.name,
       Mesh {
-        indices: raw_mesh.indices,
-        positions: raw_mesh.positions,
-        texcoord_indices: raw_mesh.texcoord_indices,
-        texcoords: raw_mesh.texcoords
+        indices: raw_mesh.indices.into_iter().map(|i| i as usize).collect(),
+        vertices,
+        vertex_normals,
+        vertex_tex_coords
       }
     )
   }
-}
-
-pub struct Mesh {
-  indices: Vec<u32>,
-  positions: Vec<f64>,
-  texcoord_indices: Vec<u32>,
-  texcoords: Vec<f64>
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -82,51 +105,45 @@ pub struct MeshSpace;
 
 impl Space<3> for MeshSpace {}
 
+pub struct Mesh {
+  indices: Vec<usize>,
+  vertices: Vec<Point3<MeshSpace>>,
+  vertex_normals: Option<(Vec<usize>, Vec<UnitVector3<MeshSpace>>)>,
+  vertex_tex_coords: Option<(Vec<usize>, Vec<TextureCoordinate>)>
+}
+
 impl Mesh {
-  fn get_point(&self, index: usize, transform: &LocalToWorld<MeshSpace>) -> WorldPoint {
-    let idx = self.indices[index] as usize;
-    transform.point(&Point3::from_array([
-      self.positions[idx * 3],
-      self.positions[idx * 3 + 1],
-      self.positions[idx * 3 + 2]
-    ]))
-  }
-
-  fn get_normal(&self, _index: usize, _transform: &LocalToWorld<MeshSpace>) -> WorldUnitVector {
-    // let idx = self.normal_indices[index] as usize;
-    // transform.normal(&UnitVector3::from_array([
-    //   self.normals[idx * 3],
-    //   self.normals[idx * 3 + 1],
-    //   self.normals[idx * 3 + 2]
-    // ]))
-
-    // TODO: Temporary garbage
-    WorldUnitVector::from_array([1.0, 0.0, 0.0])
-  }
-
-  fn get_texcoords(&self, index: usize) -> TextureCoordinate {
-    if self.texcoord_indices.len() == 0 {
-      TextureCoordinate::zero()
-    } else {
-      let idx = self.texcoord_indices[index] as usize;
-      TextureCoordinate::from_array([self.texcoords[idx * 2], self.texcoords[idx * 2 + 1]])
-    }
-  }
-
   pub fn to_triangles(&self, transform: LocalToWorld<MeshSpace>, material: Arc<dyn Material>) -> Vec<TriangleSurface> {
-    if self.indices.len() % 3 != 0 {
-      panic!("Faces are not triangulated!")
-    }
-
-    let data: Vec<_> = (0..self.indices.len())
-      .map(|i| (self.get_point(i, &transform), self.get_normal(i, &transform), self.get_texcoords(i)))
-      .collect();
-
-    data
+    (0..self.indices.len())
+      .collect::<Vec<_>>()
       .chunks_exact(3)
-      .map(|triple| {
-        if let [d0, d1, d2] = triple {
-          TriangleSurface::new(*d0, *d1, *d2, material.clone())
+      .map(|vertex_indices| {
+        if let [i0, i1, i2] = *vertex_indices {
+          let vi0 = self.indices[i0];
+          let vi1 = self.indices[i1];
+          let vi2 = self.indices[i2];
+
+          let vertices = (
+            transform.point(&self.vertices[vi0]),
+            transform.point(&self.vertices[vi1]),
+            transform.point(&self.vertices[vi2])
+          );
+
+          let normals = self.vertex_normals.as_ref().map(|(normal_indices, normals)| {
+            let ni0 = normal_indices[i0];
+            let ni1 = normal_indices[i1];
+            let ni2 = normal_indices[i2];
+            (transform.normal(&normals[ni0]), transform.normal(&normals[ni1]), transform.normal(&normals[ni2]))
+          });
+
+          let tex_coords = self.vertex_tex_coords.as_ref().map(|(tex_coord_indices, tex_coords)| {
+            let ti0 = tex_coord_indices[i0];
+            let ti1 = tex_coord_indices[i1];
+            let ti2 = tex_coord_indices[i2];
+            (tex_coords[ti0], tex_coords[ti1], tex_coords[ti2])
+          });
+
+          TriangleSurface::new(vertices, normals, tex_coords, material.clone())
         } else {
           panic!("chunks_exact didn't work!")
         }

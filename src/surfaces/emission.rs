@@ -25,16 +25,19 @@ impl UniformChoiceEmittedRayRandomVariable {
   pub fn num_surfaces(&self) -> usize { self.surfaces.len() }
 }
 
-impl ContinuousRandomVariable<(), (WorldRay, Color)> for UniformChoiceEmittedRayRandomVariable {
-  fn sample(&self, param: &(), sampler: &mut dyn Sampler) -> Option<(WorldRay, Color)> {
+impl ContinuousRandomVariable for UniformChoiceEmittedRayRandomVariable {
+  type Param = ();
+  type Sample = (WorldRay, Color);
+
+  fn sample(&self, _: &Self::Param, sampler: &mut dyn Sampler) -> Option<Self::Sample> {
     let index = sampler.random_in_closed_open(0.0, self.surfaces.len() as Real) as usize;
     let surface = &self.surfaces[index];
-    surface.emitted_ray_random_variable().sample(param, sampler)
+    surface.emitted_ray_random_variable().sample(&(), sampler)
   }
 
-  fn sample_with_pdf(&self, param: &(), sampler: &mut dyn Sampler) -> Option<((WorldRay, Color), PositiveReal)> {
-    if let Some(sample) = self.sample(param, sampler) {
-      if let Some(pdf) = self.pdf(param, &sample) {
+  fn sample_with_pdf(&self, _: &Self::Param, sampler: &mut dyn Sampler) -> Option<(Self::Sample, PositiveReal)> {
+    if let Some(sample) = self.sample(&(), sampler) {
+      if let Some(pdf) = self.pdf(&(), &sample) {
         return Some((sample, pdf));
       }
     }
@@ -42,12 +45,12 @@ impl ContinuousRandomVariable<(), (WorldRay, Color)> for UniformChoiceEmittedRay
     None
   }
 
-  fn pdf(&self, param: &(), sample: &(WorldRay, Color)) -> Option<PositiveReal> {
+  fn pdf(&self, _: &Self::Param, sample: &Self::Sample) -> Option<PositiveReal> {
     PositiveReal::new(
       self
         .surfaces
         .iter()
-        .filter_map(|s| s.emitted_ray_random_variable().pdf(param, sample).map(|p| p.into_inner()))
+        .filter_map(|s| s.emitted_ray_random_variable().pdf(&(), sample).map(|p| p.into_inner()))
         .sum::<Real>()
         * self.inverse_num_surfaces
     )

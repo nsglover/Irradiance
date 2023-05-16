@@ -5,23 +5,16 @@
 			"at": [0, -4, 0],
 			"up": [0, 1, 0]
 		},
-		"vfov": 40,
-		"fdist": 800,
+		"field-of-view": 40,
+		"focal-distance": 800,
     "resolution": [1024, 1024]
 	},
-	"samples-per-pixel": 128,
+	"samples-per-pixel": 2048,
 	"background": [0,0,0],
-  "_integrator":
+  "integrator":
   {
     "type": "material-path-tracer",
     "average-path-length": 256
-  },
-  "integrator":
-  {
-    "type": "photon-tracer",
-    "total-photons": 128000000,
-    "average-path-length": 256,
-    "radiance-estimate-photons": 64
   },
 	"materials": [
 		{
@@ -90,7 +83,6 @@
 					"translate": [0, 277.5, 0]
 				}
 			],
-			"size": [555,555],
 			"material": "white"
 		},
 		{

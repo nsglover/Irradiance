@@ -1,29 +1,20 @@
 {
 	"camera": {
 		"transform": {
-			"from": [0, 100, 1077.5],
+			"from": [0, 20, 1077.5],
 			"at": [0, -4, 0],
 			"up": [0, 1, 0]
 		},
-		"vfov": 40,
-		"fdist": 800,
+		"field-of-view": 40,
+		"focal-distance": 800,
     "resolution": [1024, 1024]
 	},
-	"samples-per-pixel": 1,
+	"samples-per-pixel": 2048,
 	"background": [0,0,0],
-  "_integrator":
+  "integrator":
   {
     "type": "material-path-tracer",
     "average-path-length": 256
-  },
-  "integrator":
-  {
-    "type": "progressive-photon-tracer",
-    "total-photons": 64000000,
-    "average-path-length": 256,
-    "initial-radius": 1,
-    "shrinking-factor": 0.33,
-    "iterations": 64
   },
 	"materials": [
 		{

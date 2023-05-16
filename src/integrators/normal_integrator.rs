@@ -25,24 +25,26 @@ struct NormalIntegrator {
 
 impl Integrator for NormalIntegrator {
   fn radiance_estimate(&self, sampler: &mut dyn Sampler, ray: WorldRay) -> Color {
-    if let Some((hit, mat)) = self.scene.intersect_world_ray(ray) {
-      let mut radiance_emitted = mat.emitted(&hit).unwrap_or(Color::black());
-      if let Some(scatter_rv) = mat.scatter_random_variable() {
+    let out_dir = -ray.dir();
+    if let Some(hit) = self.scene.intersect_world_ray(ray) {
+      let mut radiance_emitted = hit.material.emitted(&hit).unwrap_or(Color::black());
+      if let Some(scatter_rv) = hit.material.scatter_random_variable() {
+        let param = (hit.surface_point, out_dir);
         match scatter_rv {
-          ScatterRandomVariable::Continuous(rv) => {
-            if let Some((sample, _)) = rv.sample_with_pdf(&hit, sampler) {
-              radiance_emitted += mat.bsdf(&hit, &sample);
+          ScatterRandomVariable::Diffuse(rv) => {
+            if let Some((in_dir, _)) = rv.sample_with_pdf(&param, sampler) {
+              radiance_emitted += hit.material.bsdf_cos(&param.0, &in_dir, &out_dir);
             }
           },
-          ScatterRandomVariable::Discrete(rv) => {
-            if let Some(sample) = rv.sample(&hit, sampler) {
-              radiance_emitted += mat.bsdf(&hit, &sample);
+          ScatterRandomVariable::Specular(rv) => {
+            if let Some(in_dir) = rv.sample(&param, sampler) {
+              radiance_emitted += hit.material.bsdf_cos(&param.0, &in_dir, &out_dir);
             }
           },
         }
       }
 
-      radiance_emitted / 2.0
+      radiance_emitted
     } else {
       Color::black()
     }

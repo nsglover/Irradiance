@@ -10,12 +10,14 @@ use crate::{
   math::*,
   raytracing::*,
   sampling::{uniform_random_on_unit_sphere, ContinuousRandomVariable, Sampler},
+  textures::TextureCoordinate,
   BuildSettings
 };
 
 #[derive(Debug, Deserialize)]
 pub struct SphereSurfaceParameters {
-  transform: TransformParameters,
+  center: [Real; 3],
+  radius: Real,
   material: String
 }
 
@@ -27,13 +29,12 @@ impl SurfaceParameters for SphereSurfaceParameters {
     _: &HashMap<String, Mesh>,
     _: BuildSettings
   ) -> Box<dyn Surface> {
-    let t = self.transform.clone().build_transform();
-    let r = PositiveReal::new_unchecked(t.vector(&Vector::from_array([1.0, 0.0, 0.0])).norm());
+    let radius = PositiveReal::new(self.radius).expect("Sphere radius must be positive");
     Box::new(SphereSurface {
-      transformed_radius: r,
-      transformed_center: t.point(&Point::origin()),
-      inverse_transformed_area: PositiveReal::new_unchecked(1.0 / (4.0 * PI * r * r)),
-      transform: t,
+      radius,
+      radius_squared: radius * radius,
+      center: Point::from_array(self.center),
+      inverse_area: PositiveReal::new_unchecked(1.0 / (4.0 * PI * radius * radius)),
       material: materials.get(&self.material).unwrap().clone()
     })
   }
@@ -50,56 +51,48 @@ impl Space<3> for SphereSpace {}
 
 #[derive(Debug)]
 pub struct SphereSurface {
-  transform: LocalToWorld<SphereSpace>,
-  transformed_radius: PositiveReal,
-  inverse_transformed_area: PositiveReal,
-  transformed_center: WorldPoint,
+  radius: PositiveReal,
+  radius_squared: PositiveReal,
+  inverse_area: PositiveReal,
+  center: WorldPoint,
   material: Arc<dyn Material>
 }
 
-impl ContinuousRandomVariable<(), (WorldRay, Color)> for SphereSurface {
-  fn sample_with_pdf(&self, _: &(), sampler: &mut dyn Sampler) -> Option<((WorldRay, Color), PositiveReal)> {
+impl ContinuousRandomVariable for SphereSurface {
+  type Param = ();
+  type Sample = (WorldRay, Color);
+
+  fn sample_with_pdf(&self, _: &Self::Param, sampler: &mut dyn Sampler) -> Option<(Self::Sample, PositiveReal)> {
     self
       .material
       .emit_random_variable()
       .map(|rv| {
         let normal = uniform_random_on_unit_sphere(sampler);
-        let point = self.transformed_center + normal * self.transformed_radius.into_inner();
+        let point = self.center + normal * self.radius.into_inner();
 
-        rv.sample_with_pdf(&(point, normal), sampler).map(|((dir, light), pdf)| {
-          ((Ray::new(point, dir), light * dir.dot(&normal).abs()), pdf * self.inverse_transformed_area)
-        })
+        rv.sample_with_pdf(&(point, normal), sampler)
+          .map(|((dir, light), pdf)| ((Ray::new(point, dir), light * dir.dot(&normal).abs()), pdf * self.inverse_area))
       })
       .flatten()
   }
 
-  fn pdf(&self, _: &(), sample: &(WorldRay, Color)) -> Option<PositiveReal> {
+  fn pdf(&self, _: &Self::Param, sample: &Self::Sample) -> Option<PositiveReal> {
     self
       .material
       .emit_random_variable()
       .map(|rv| {
-        rv.pdf(
-          &(sample.0.origin(), (sample.0.origin() - self.transformed_center).normalize()),
-          &(sample.0.dir(), sample.1)
-        )
-        .map(|p| p * self.inverse_transformed_area)
+        rv.pdf(&(sample.0.origin(), (sample.0.origin() - self.center).normalize()), &(sample.0.dir(), sample.1))
+          .map(|p| p * self.inverse_area)
       })
       .flatten()
   }
 }
 
-impl TransformedSurface for SphereSurface {
-  type LocalSpace = SphereSpace;
-
-  fn local_to_world(&self) -> &LocalToWorld<Self::LocalSpace> { &self.transform }
-
-  fn intersect_ray(
-    &self,
-    ray: &mut Ray3<Self::LocalSpace>
-  ) -> Option<(RayIntersection<Self::LocalSpace>, &dyn Material)> {
-    let origin_vec = Vector3::from(ray.origin());
-    let b = 2.0 * Vector3::from(ray.dir()).dot(&origin_vec);
-    let c = origin_vec.norm_squared() - 1.0;
+impl Surface for SphereSurface {
+  fn intersect_world_ray(&self, ray: &mut WorldRay) -> Option<WorldSurfaceInterface> {
+    let o_minus_c = ray.origin() - self.center;
+    let b = 2.0 * Vector3::from(ray.dir()).dot(&o_minus_c);
+    let c = o_minus_c.norm_squared() - self.radius_squared;
 
     let discriminant = b * b - 4.0 * c;
     if discriminant < 0.0 {
@@ -125,32 +118,39 @@ impl TransformedSurface for SphereSurface {
       return None;
     }
 
-    let normalized_p = Vector3::from(p).normalize();
+    let normal = (p - self.center).normalize();
 
-    let phi = p.inner().y.atan2(p.inner().x);
-    let theta = p.inner().z.asin();
-    let u = (phi + PI) / (2.0 * PI);
-    let v = (theta + PI / 2.0) / PI;
+    let n = normal.inner();
+    let phi = n.y.atan2(n.x);
+    let theta = n.z.asin();
+    let u = (phi + PI) * INV_PI / 2.0;
+    let v = (theta + PI / 2.0) * INV_PI;
 
-    Some((
-      RayIntersection {
-        intersect_direction: ray.dir(),
-        intersect_time: t,
-        intersect_point: Point::from_vector(normalized_p.into_vector()),
-        geometric_normal: normalized_p,
-        tex_coords: Vector::from_array([u, v])
+    Some(SurfaceInterface {
+      surface_point: SurfacePoint {
+        point: self.center + normal * self.radius.into_inner(),
+        geometric_normal: normal,
+        shading_normal: normal,
+        tex_coord: TextureCoordinate::from_array([u, v])
       },
-      self.material.as_ref()
-    ))
+      material: self.material.as_ref(),
+      time: t
+    })
   }
 
-  fn emitted_ray_random_variable(&self) -> &dyn ContinuousRandomVariable<(), (WorldRay, Color)> { self }
-
-  fn local_bounding_box(&self) -> BoundingBox3<Self::LocalSpace> {
-    BoundingBox3::new(nalgebra::point![-1.0, -1.0, -1.0].into(), nalgebra::point![1.0, 1.0, 1.0].into())
+  fn emitted_ray_random_variable(&self) -> &dyn ContinuousRandomVariable<Param = (), Sample = (WorldRay, Color)> {
+    self
   }
 
-  fn num_subsurfaces(&self) -> usize { 1 }
+  fn world_bounding_box(&self) -> WorldBoundingBox {
+    let r = self.radius.into_inner();
+    BoundingBox3::new(
+      self.center + nalgebra::vector![-r, -r, -r].into(),
+      self.center + nalgebra::vector![r, r, r].into()
+    )
+  }
+
+  fn num_subsurfaces(&self) -> usize { 0 }
 
   // fn intersecting_direction_sample(
   //   &self,

@@ -5,20 +5,26 @@ use crate::math::PositiveReal;
 
 #[derive(Debug)]
 pub enum RandomVariable<P, S> {
-  Continuous(Box<dyn ContinuousRandomVariable<P, S>>),
-  Discrete(Box<dyn DiscreteRandomVariable<P, S>>)
+  Diffuse(Box<dyn ContinuousRandomVariable<Param = P, Sample = S>>),
+  Specular(Box<dyn DiscreteRandomVariable<Param = P, Sample = S>>)
 }
 
-pub trait ContinuousRandomVariable<P, S>: Debug {
-  fn sample(&self, param: &P, sampler: &mut dyn Sampler) -> Option<S> {
+pub trait ContinuousRandomVariable: Debug {
+  type Param;
+  type Sample;
+
+  fn sample(&self, param: &Self::Param, sampler: &mut dyn Sampler) -> Option<Self::Sample> {
     self.sample_with_pdf(param, sampler).map(|(s, _)| s)
   }
 
-  fn sample_with_pdf(&self, param: &P, sampler: &mut dyn Sampler) -> Option<(S, PositiveReal)>;
+  fn sample_with_pdf(&self, param: &Self::Param, sampler: &mut dyn Sampler) -> Option<(Self::Sample, PositiveReal)>;
 
-  fn pdf(&self, param: &P, sample: &S) -> Option<PositiveReal>;
+  fn pdf(&self, param: &Self::Param, sample: &Self::Sample) -> Option<PositiveReal>;
 }
 
-pub trait DiscreteRandomVariable<P, S>: Debug {
-  fn sample(&self, param: &P, sampler: &mut dyn Sampler) -> Option<S>;
+pub trait DiscreteRandomVariable: Debug {
+  type Param;
+  type Sample;
+
+  fn sample(&self, param: &Self::Param, sampler: &mut dyn Sampler) -> Option<Self::Sample>;
 }

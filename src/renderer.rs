@@ -24,7 +24,7 @@ use crate::{
 };
 
 #[derive(Debug, Deserialize)]
-struct SceneParameters {
+pub struct SceneParameters {
   #[serde(alias = "samples-per-pixel")]
   pub samples_per_pixel: usize,
 
@@ -46,15 +46,14 @@ struct SceneParameters {
 
 pub struct Renderer {
   samples_per_pixel: usize,
-  camera: Camera,
-  integrators: Vec<Box<dyn Integrator>>
+  camera: Arc<Camera>,
+  integrators: Arc<Vec<Box<dyn Integrator>>>
 }
 
 type Image = ImageBuffer<Rgb<u8>, Vec<u8>>;
 
 impl Renderer {
-  pub fn build_from_json(json: serde_json::Value, settings: BuildSettings) -> Result<Renderer, Box<dyn Error>> {
-    // Parse the scene from JSON
+  pub fn build(params: SceneParameters, settings: BuildSettings) -> Result<Renderer, Box<dyn Error>> {
     let SceneParameters {
       samples_per_pixel,
       camera_params,
@@ -62,7 +61,7 @@ impl Renderer {
       mesh_params,
       surface_params,
       integrator_params
-    } = serde_json::from_value(json)?;
+    } = params;
 
     // Build materials
     let materials = material_params.into_iter().map(|p| (p.name(), p.build_material())).collect();
@@ -83,13 +82,14 @@ impl Renderer {
     let integrators = integrator_params.build_integrators(scene, settings)?;
 
     // Return the scene with its camera
-    Ok(Self { samples_per_pixel, camera: camera_params.build_camera(), integrators })
+    Ok(Self { samples_per_pixel, camera: Arc::new(camera_params.build_camera()), integrators: Arc::new(integrators) })
   }
 
-  pub fn render_scene(self, settings: RenderSettings) -> DynamicImage {
+  pub fn render(&self, settings: RenderSettings) -> DynamicImage {
     // Create the image to which we will be rendering.
     let (width, height) = (self.camera.resolution().0, self.camera.resolution().1);
     let image = Image::new(width, height);
+    let image_lock = Arc::new(Mutex::new(image));
 
     // Compute the number of intervals that will be rendered concurrently.
     let (subimg_width, subimg_height) = settings.subimage_dimensions;
@@ -102,13 +102,8 @@ impl Renderer {
     let thread_pool = Builder::new()
       .num_threads(settings.num_threads)
       .thread_stack_size(16 * 1024 * 1024)
-      .thread_name("pbr-project-subimage-renderer".to_owned())
+      .thread_name("irradiance-subimage-renderer".to_owned())
       .build();
-
-    // Move all shared data into atomic reference counters.
-    let integrators = Arc::new(self.integrators);
-    let camera = Arc::new(self.camera);
-    let image_lock = Arc::new(Mutex::new(image));
 
     // For each pair of intervals, add a subimage window to a collection.
     let mut subimage_windows = Vec::new();
@@ -128,7 +123,7 @@ impl Renderer {
 
     // If enabled, start up the progress bar
     let maybe_progress_bar = settings.use_progress_bar.then(|| {
-      let bar_style = "[ {elapsed_precise} / {msg} ]: {bar:50.green/red} ".to_string()
+      let bar_style = "[ {elapsed_precise} / {msg} ]: {bar:50.cyan/magenta} ".to_string()
         + &format!("{{pos:>{}}}/{{len}} subimages", (num_subimages as f64).log10().ceil() as usize);
 
       let progress_bar =
@@ -145,8 +140,8 @@ impl Renderer {
       // Send the render job to the threadpool
       Self::async_integrate_subimage(
         &thread_pool,
-        &integrators,
-        &camera,
+        &self.integrators,
+        &self.camera,
         self.samples_per_pixel,
         &image_lock,
         subimage_window

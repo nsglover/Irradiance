@@ -2,7 +2,6 @@ mod integrator;
 mod material_path_tracer;
 mod mixture_path_tracer;
 mod normal_integrator;
-mod photon_mapping;
 
 pub use integrator::*;
 

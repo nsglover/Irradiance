@@ -33,7 +33,10 @@ pub struct DiffuseLight {
   light_intensity: Real
 }
 
-impl ContinuousRandomVariable<(WorldPoint, WorldUnitVector), (WorldUnitVector, Color)> for DiffuseLight {
+impl ContinuousRandomVariable for DiffuseLight {
+  type Param = (WorldPoint, WorldUnitVector);
+  type Sample = (WorldUnitVector, Color);
+
   fn sample_with_pdf(
     &self,
     (_, normal): &(WorldPoint, WorldUnitVector),
@@ -57,21 +60,18 @@ impl ContinuousRandomVariable<(WorldPoint, WorldUnitVector), (WorldUnitVector, C
 }
 
 impl Material for DiffuseLight {
-  fn bsdf(&self, _: &WorldRayIntersection, _: &WorldUnitVector) -> Color { Color::black() }
+  fn bsdf_cos(&self, _: &WorldSurfacePoint, _: &WorldUnitVector, _: &WorldUnitVector) -> Color { Color::black() }
 
   fn scatter_random_variable(&self) -> Option<&ScatterRandomVariable> { None }
 
-  fn emitted(&self, hit: &WorldRayIntersection) -> Option<Color> {
-    if hit.intersect_direction.dot(&hit.geometric_normal) > 0.0 {
-      None
-    } else {
-      Some(self.light_color.value(&hit.tex_coords) * self.light_intensity)
-    }
+  fn emitted(&self, hit: &WorldSurfaceInterface) -> Option<Color> {
+    Some(self.light_color.value(&hit.surface_point.tex_coord) * self.light_intensity)
   }
 
   fn emit_random_variable(
     &self
-  ) -> Option<&dyn ContinuousRandomVariable<(WorldPoint, WorldUnitVector), (WorldUnitVector, Color)>> {
+  ) -> Option<&dyn ContinuousRandomVariable<Param = (WorldPoint, WorldUnitVector), Sample = (WorldUnitVector, Color)>>
+  {
     Some(self)
   }
 }

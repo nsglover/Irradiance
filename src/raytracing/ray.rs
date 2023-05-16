@@ -18,14 +18,6 @@ const MIN_INTERSECT_TIME: PositiveReal = PositiveReal::new_unchecked(0.001);
 impl<const D: usize, S: Space<D>> Ray<D, S>
 where Const<D>: ToTypenum
 {
-  pub fn cast_unchecked<T: Space<D>>(&self) -> Ray<D, T> {
-    Ray {
-      max_intersect_time: self.max_intersect_time,
-      origin: self.origin.cast_unchecked(),
-      dir: self.dir.cast_unchecked()
-    }
-  }
-
   pub fn new(origin: Point<D, S>, dir: UnitVector<D, S>) -> Self {
     Self { max_intersect_time: PositiveReal::MAX, origin, dir }
   }

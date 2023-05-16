@@ -1,4 +1,4 @@
-use std::{collections::HashMap, sync::Arc};
+use std::{collections::HashMap, marker::PhantomData, sync::Arc};
 
 use serde::Deserialize;
 
@@ -27,7 +27,9 @@ impl SurfaceParameters for SurfaceListParameters {
     meshes: &std::collections::HashMap<String, Mesh>,
     settings: BuildSettings
   ) -> Box<dyn Surface> {
-    Box::new(SurfaceList::build(self.surfaces.iter().map(|s| s.build_surface(materials, meshes, settings)).collect()))
+    Box::new(SurfaceList::<BoxCheck>::build(
+      self.surfaces.iter().map(|s| s.build_surface(materials, meshes, settings)).collect()
+    ))
   }
 
   fn is_emissive(&self, materials: &HashMap<String, Arc<dyn Material>>) -> bool {
@@ -36,13 +38,20 @@ impl SurfaceParameters for SurfaceListParameters {
 }
 
 #[derive(Debug)]
-pub struct SurfaceList {
+pub struct BoxCheck;
+
+#[derive(Debug)]
+pub struct NoBoxCheck;
+
+#[derive(Debug)]
+pub struct SurfaceList<Variant> {
   inverse_num_surfaces: PositiveReal,
   surfaces: Vec<(Box<dyn Surface>, WorldBoundingBox)>,
-  bounding_box: WorldBoundingBox
+  bounding_box: WorldBoundingBox,
+  _phantom: PhantomData<Variant>
 }
 
-impl SurfaceList {
+impl<T> SurfaceList<T> {
   pub fn build(surfaces: Vec<Box<dyn Surface>>) -> Self {
     let bboxes: Vec<_> = surfaces.iter().map(|s| s.world_bounding_box()).collect();
     let bounding_box = bboxes.iter().fold(WorldBoundingBox::default(), |mut acc, b| {
@@ -53,21 +62,25 @@ impl SurfaceList {
     Self {
       inverse_num_surfaces: PositiveReal::new_unchecked(1.0 / surfaces.len() as Real),
       surfaces: surfaces.into_iter().zip(bboxes.into_iter()).collect(),
-      bounding_box
+      bounding_box,
+      _phantom: PhantomData::default()
     }
   }
 }
 
-impl ContinuousRandomVariable<(), (WorldRay, Color)> for SurfaceList {
-  fn sample(&self, param: &(), sampler: &mut dyn Sampler) -> Option<(WorldRay, Color)> {
+impl<T: std::fmt::Debug> ContinuousRandomVariable for SurfaceList<T> {
+  type Param = ();
+  type Sample = (WorldRay, Color);
+
+  fn sample(&self, _: &Self::Param, sampler: &mut dyn Sampler) -> Option<Self::Sample> {
     let index = sampler.random_in_closed_open(0.0, self.surfaces.len() as Real) as usize;
     let (surface, _) = &self.surfaces[index];
-    surface.emitted_ray_random_variable().sample(param, sampler)
+    surface.emitted_ray_random_variable().sample(&(), sampler)
   }
 
-  fn sample_with_pdf(&self, param: &(), sampler: &mut dyn Sampler) -> Option<((WorldRay, Color), PositiveReal)> {
-    if let Some(sample) = self.sample(param, sampler) {
-      if let Some(pdf) = self.pdf(param, &sample) {
+  fn sample_with_pdf(&self, _: &Self::Param, sampler: &mut dyn Sampler) -> Option<(Self::Sample, PositiveReal)> {
+    if let Some(sample) = self.sample(&(), sampler) {
+      if let Some(pdf) = self.pdf(&(), &sample) {
         return Some((sample, pdf));
       }
     }
@@ -75,7 +88,7 @@ impl ContinuousRandomVariable<(), (WorldRay, Color)> for SurfaceList {
     None
   }
 
-  fn pdf(&self, param: &(), sample: &(WorldRay, Color)) -> Option<PositiveReal> {
+  fn pdf(&self, param: &Self::Param, sample: &Self::Sample) -> Option<PositiveReal> {
     PositiveReal::new(
       self
         .surfaces
@@ -87,13 +100,13 @@ impl ContinuousRandomVariable<(), (WorldRay, Color)> for SurfaceList {
   }
 }
 
-impl Surface for SurfaceList {
-  fn intersect_world_ray(&self, ray: &mut WorldRay) -> Option<(WorldRayIntersection, &dyn Material)> {
+impl Surface for SurfaceList<BoxCheck> {
+  fn intersect_world_ray(&self, ray: &mut WorldRay) -> Option<WorldSurfaceInterface> {
     let mut closest = None;
     for (surface, bbox) in &self.surfaces {
-      if bbox.ray_intersects_fast(&ray) {
+      if bbox.ray_intersects(&ray) {
         if let Some(hit) = surface.intersect_world_ray(ray) {
-          ray.set_max_intersect_time(hit.0.intersect_time);
+          ray.set_max_intersect_time(hit.time);
           closest = Some(hit);
         }
       }
@@ -102,31 +115,34 @@ impl Surface for SurfaceList {
     closest
   }
 
-  fn emitted_ray_random_variable(&self) -> &dyn ContinuousRandomVariable<(), (WorldRay, Color)> { self }
+  fn emitted_ray_random_variable(&self) -> &dyn ContinuousRandomVariable<Param = (), Sample = (WorldRay, Color)> {
+    self
+  }
 
   fn world_bounding_box(&self) -> WorldBoundingBox { self.bounding_box.clone() }
 
   fn num_subsurfaces(&self) -> usize { self.surfaces.len() }
+}
 
-  // fn pdf(&self, point: &WorldPoint, direction: &WorldUnitVector) -> Real {
-  //   self
-  //     .emissive_indices
-  //     .iter()
-  //     .map(|i| self.surfaces[*i].0.intersecting_direction_pdf(point, direction))
-  //     .sum::<Real>()
-  //     / (self.emissive_indices.len() as Real)
-  // }
+// TODO: This whole Box/NoBox Check thing is kinda hacky
+impl Surface for SurfaceList<NoBoxCheck> {
+  fn intersect_world_ray(&self, ray: &mut WorldRay) -> Option<WorldSurfaceInterface> {
+    let mut closest = None;
+    for (surface, _) in &self.surfaces {
+      if let Some(hit) = surface.intersect_world_ray(ray) {
+        ray.set_max_intersect_time(hit.time);
+        closest = Some(hit);
+      }
+    }
 
-  // fn sample_and_pdf(
-  //   &self,
-  //   point: &WorldPoint,
-  //   sampler: &mut dyn Sampler
-  // ) -> (WorldUnitVector, Real) {
-  //   let num_emissives = self.emissive_indices.len() as Real;
-  //   let index = (sampler.next_non_one().into_inner() * num_emissives) as usize;
-  //   let emissive = &self.surfaces[self.emissive_indices[index]].0;
-  //   let direction = emissive.interesting_direction_sample(point, sampler).0;
-  //   let pdf = self.pdf(point, &direction);
-  //   (direction, pdf)
-  // }
+    closest
+  }
+
+  fn emitted_ray_random_variable(&self) -> &dyn ContinuousRandomVariable<Param = (), Sample = (WorldRay, Color)> {
+    self
+  }
+
+  fn world_bounding_box(&self) -> WorldBoundingBox { self.bounding_box.clone() }
+
+  fn num_subsurfaces(&self) -> usize { self.surfaces.len() }
 }

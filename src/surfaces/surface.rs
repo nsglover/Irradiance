@@ -2,8 +2,7 @@ use std::{collections::HashMap, fmt::Debug, sync::Arc};
 
 use super::Mesh;
 use crate::{
-  common::Wrapper, light::Color, materials::Material, math::*, raytracing::*, sampling::ContinuousRandomVariable,
-  BuildSettings
+  light::Color, materials::Material, math::*, raytracing::*, sampling::ContinuousRandomVariable, BuildSettings
 };
 
 #[typetag::deserialize(tag = "type")]
@@ -19,84 +18,11 @@ pub trait SurfaceParameters: Debug {
 }
 
 pub trait Surface: Debug {
-  fn intersect_world_ray(&self, ray: &mut WorldRay) -> Option<(WorldRayIntersection, &dyn Material)>;
+  fn intersect_world_ray(&self, ray: &mut WorldRay) -> Option<WorldSurfaceInterface>;
 
-  fn emitted_ray_random_variable(&self) -> &dyn ContinuousRandomVariable<(), (WorldRay, Color)>;
+  fn emitted_ray_random_variable(&self) -> &dyn ContinuousRandomVariable<Param = (), Sample = (WorldRay, Color)>;
 
   fn world_bounding_box(&self) -> WorldBoundingBox;
 
   fn num_subsurfaces(&self) -> usize;
-}
-
-pub trait TransformedSurface {
-  type LocalSpace: Space<3>;
-
-  fn local_to_world(&self) -> &LocalToWorld<Self::LocalSpace>;
-
-  fn intersect_ray(
-    &self,
-    ray: &mut Ray3<Self::LocalSpace>
-  ) -> Option<(RayIntersection<Self::LocalSpace>, &dyn Material)>;
-
-  fn emitted_ray_random_variable(&self) -> &dyn ContinuousRandomVariable<(), (WorldRay, Color)>;
-
-  fn local_bounding_box(&self) -> BoundingBox3<Self::LocalSpace>;
-
-  fn num_subsurfaces(&self) -> usize;
-}
-
-// TODO: Move this to transform class
-impl<T: TransformedSurface + Debug> Surface for T {
-  fn intersect_world_ray(&self, ray: &mut WorldRay) -> Option<(WorldRayIntersection, &dyn Material)> {
-    let tr = self.local_to_world();
-    let mut local_ray = tr.inverse_ray(&ray);
-    self.intersect_ray(&mut local_ray).map(|(local_hit, mat)| (tr.ray_intersect(&local_hit), mat))
-  }
-
-  fn emitted_ray_random_variable(&self) -> &dyn ContinuousRandomVariable<(), (WorldRay, Color)> {
-    self.emitted_ray_random_variable()
-  }
-
-  fn world_bounding_box(&self) -> WorldBoundingBox {
-    let bbox = self.local_bounding_box();
-    let min = bbox.min().into_inner();
-    let max = bbox.max().into_inner();
-    if bbox.is_empty() {
-      WorldBoundingBox::new(min.into(), max.into())
-    } else {
-      let mut points: [Point3<T::LocalSpace>; 8] = [Point3::origin(); 8];
-      points[0] = Point3::from(nalgebra::point![min.x, min.y, min.z]);
-      points[1] = Point3::from(nalgebra::point![max.x, min.y, min.z]);
-      points[2] = Point3::from(nalgebra::point![min.x, max.y, min.z]);
-      points[3] = Point3::from(nalgebra::point![min.x, min.y, max.z]);
-      points[4] = Point3::from(nalgebra::point![max.x, max.y, min.z]);
-      points[5] = Point3::from(nalgebra::point![min.x, max.y, max.z]);
-      points[6] = Point3::from(nalgebra::point![max.x, min.y, max.z]);
-      points[7] = Point3::from(nalgebra::point![max.x, max.y, max.z]);
-
-      let mut transformed_bbox = WorldBoundingBox::default();
-      for point in points {
-        transformed_bbox.enclose_point(&(self.local_to_world().point(&point)));
-      }
-
-      transformed_bbox
-    }
-  }
-
-  fn num_subsurfaces(&self) -> usize { self.num_subsurfaces() }
-
-  // fn intersecting_direction_sample(
-  //   &self,
-  //   point: &WorldPoint,
-  //   sampler: &mut dyn Sampler
-  // ) -> (WorldUnitVector, Real) {
-  //   let tr = self.local_to_world();
-  //   let (dir, pdf) = self.intersecting_direction_sample(&tr.inverse_point(point), sampler);
-  //   (tr.direction(&dir), pdf)
-  // }
-
-  // fn intersecting_direction_pdf(&self, point: &WorldPoint, direction: &WorldUnitVector) -> Real {
-  //   let tr = self.local_to_world();
-  //   self.intersecting_direction_pdf(&tr.inverse_point(point), &tr.inverse_direction(direction))
-  // }
 }

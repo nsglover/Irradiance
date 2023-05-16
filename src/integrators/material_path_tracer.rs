@@ -49,23 +49,30 @@ impl PathTraceIntegrator for MaterialPathTracer {
     sampler: &mut dyn Sampler,
     ray: WorldRay
   ) -> Result<(Color, Color, WorldRay, Option<PositiveReal>), Color> {
-    if let Some((hit, material)) = self.scene.intersect_world_ray(ray) {
-      let radiance_emitted = material.emitted(&hit).unwrap_or(Color::black());
-      if let Some(scatter_rv) = material.scatter_random_variable() {
+    let out_dir = -ray.dir();
+    if let Some(hit) = self.scene.intersect_world_ray(ray) {
+      let radiance_emitted = hit.material.emitted(&hit).unwrap_or(Color::black());
+      if let Some(scatter_rv) = hit.material.scatter_random_variable() {
+        let param = (hit.surface_point, out_dir);
         match scatter_rv {
-          ScatterRandomVariable::Continuous(rv) => {
-            if let Some((sample, pdf)) = rv.sample_with_pdf(&hit, sampler) {
+          ScatterRandomVariable::Diffuse(rv) => {
+            if let Some((in_dir, pdf)) = rv.sample_with_pdf(&param, sampler) {
               return Ok((
                 radiance_emitted,
-                material.bsdf(&hit, &sample),
-                Ray::new(hit.intersect_point, sample),
+                hit.material.bsdf_cos(&param.0, &in_dir, &out_dir),
+                Ray::new(param.0.point, in_dir),
                 Some(pdf)
               ));
             }
           },
-          ScatterRandomVariable::Discrete(rv) => {
-            if let Some(sample) = rv.sample(&hit, sampler) {
-              return Ok((radiance_emitted, material.bsdf(&hit, &sample), Ray::new(hit.intersect_point, sample), None));
+          ScatterRandomVariable::Specular(rv) => {
+            if let Some(in_dir) = rv.sample(&param, sampler) {
+              return Ok((
+                radiance_emitted,
+                hit.material.bsdf_cos(&param.0, &in_dir, &out_dir),
+                Ray::new(param.0.point, in_dir),
+                None
+              ));
             }
           },
         }

@@ -14,16 +14,20 @@ pub trait MaterialParameters: Debug {
   fn build_material(&self) -> Arc<dyn Material>;
 }
 
-pub type ScatterRandomVariable = RandomVariable<WorldRayIntersection, WorldUnitVector>;
+pub type ScatterRandomVariable = RandomVariable<(WorldSurfacePoint, WorldUnitVector), WorldUnitVector>;
 
 pub trait Material: Debug {
-  fn emitted(&self, hit: &WorldRayIntersection) -> Option<Color>;
+  fn emitted(&self, hit: &WorldSurfaceInterface) -> Option<Color>;
 
-  fn bsdf(&self, hit: &WorldRayIntersection, scattered_dir: &WorldUnitVector) -> Color;
+  fn bsdf(&self, point: &WorldSurfacePoint, in_dir: &WorldUnitVector, out_dir: &WorldUnitVector) -> Color {
+    self.bsdf_cos(point, in_dir, out_dir) / point.shading_normal.abs_dot(in_dir)
+  }
+
+  fn bsdf_cos(&self, point: &WorldSurfacePoint, in_dir: &WorldUnitVector, out_dir: &WorldUnitVector) -> Color;
 
   fn scatter_random_variable(&self) -> Option<&ScatterRandomVariable>;
 
   fn emit_random_variable(
     &self
-  ) -> Option<&dyn ContinuousRandomVariable<(WorldPoint, WorldUnitVector), (WorldUnitVector, Color)>>;
+  ) -> Option<&dyn ContinuousRandomVariable<Param = (WorldPoint, WorldUnitVector), Sample = (WorldUnitVector, Color)>>;
 }

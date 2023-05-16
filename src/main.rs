@@ -1,3 +1,5 @@
+#![feature(never_type)]
+
 use std::{error::Error, fs::File, io::BufReader, time::Duration};
 
 use clap::Parser;
@@ -17,20 +19,13 @@ mod surfaces;
 mod textures;
 
 // Top Priority:
-// TODO: Undo any last minute hacks for the project
-// TODO: Any TODOs scattered throughout the code
-// TODO: Does glass need PMF? Does glass need ni^2/no^2?
-// TODO: BSDF SHOULD NOT RETURN COSINE TERM!!!
-// TODO: BSDF SHOULD USE MATHEMATICAL CONVENTIONS FOR INPUT DIRECTION (i.e. negate it!)
-// TODO: Split hit info into surface info and other stuff (like intersect time)
-// TODO: Scale refracted radiance by ni^2/no^2 or whatever it is
+// TODO: Deal with BSDFs which aren't self-adjoint (i.e. dielectrics and anything using shading normals)
 // TODO: Add a debug mode which checks for NaNs and infinites and stuff like that?
+// TODO: Does glass need PMF?
+// TODO: Properly handle shading normals in BSDF sampling
 
 // Major Features:
 // TODO: Allow rays to carry more information
-// TODO: Image loading and image texture implementation
-// TODO: Use mesh surface normals and texcoords when available. Make sure to adjust for this in all
-//       integrators; need to multiply by a ratio of dot products with geometric and shading normal
 // TODO: Stratified sampling
 // TODO: Direct-lighting MIS and mixture sampling
 // TODO: Generalize MIS and mixture integrators to work with any number of arbitrary integrators
@@ -38,14 +33,13 @@ mod textures;
 // TODO: Even fancier integrators
 
 // Major Optimizations:
-// TODO: BVH should attempt to intersect the closer of its two children
-// TODO: Avoid dynamically transformed surfaces at all costs; only do this for sufficiently
-//       complex implicit surfaces which are invariant under linear transformation (not spheres)
+// TODO: Use SIMD? Also a SIMD BVH?
 // TODO: Investigate the performance disparity and fix it
+// TODO: GPU? Probably not, but one can hope
 
 // Minor Features:
 // TODO: Perlin noise texture
-// TODO: All the PA2 BSDFs
+// TODO: All the PA2 materials
 // TODO: Blend material (from any number of materials, which can be implemented using the original
 //       one that just works for two.)
 // TODO: Environment map
@@ -56,6 +50,7 @@ mod textures;
 // TODO: Better distinction between emissive and non-emissive things
 // TODO: Better distinction between directions and surface normals
 // TODO: All parameter structs should be consumed upon building their target
+// TODO: Make a progress bar wrapper
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = Some(""))]
@@ -71,7 +66,7 @@ struct Arguments {
   #[arg(short = 'j', long = "threads", default_value_t = 1)]
   num_threads: usize,
 
-  #[arg(short = 'q')]
+  #[arg(short = 'q', long = "quiet")]
   no_progress_bar: bool
 }
 
@@ -113,15 +108,15 @@ fn main() -> Result<(), Box<dyn Error>> {
   println!("\nBuilding scene from \"{scene_file}\"...");
   let build_time = std::time::Instant::now();
   let reader = BufReader::new(File::open(scene_file)?);
-  let json = serde_json::from_reader(reader)?;
-  let renderer = Renderer::build_from_json(json, BuildSettings { num_threads, use_progress_bar: !no_progress_bar })?;
+  let params = serde_json::from_reader(reader)?;
+  let renderer = Renderer::build(params, BuildSettings { num_threads, use_progress_bar: !no_progress_bar })?;
 
   println!("Building complete! Time: {}\n", duration_to_hms(&build_time.elapsed()));
 
   // Render the scene
   println!("Rendering scene \"{scene_name}.json\"...");
   let render_time = std::time::Instant::now();
-  let image = renderer.render_scene(RenderSettings {
+  let image = renderer.render(RenderSettings {
     num_threads,
     subimage_dimensions: (subimage_edge_length, subimage_edge_length),
     use_progress_bar: !no_progress_bar

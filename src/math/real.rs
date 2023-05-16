@@ -2,9 +2,11 @@ use std::ops;
 
 use derive_more::{Add, AddAssign, Into};
 
-pub type Real = f64;
+pub type Real = f32;
 
 pub const PI: Real = std::f64::consts::PI as Real;
+
+pub const INV_PI: Real = 1.0 / (std::f64::consts::PI as Real);
 
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Add, AddAssign, Into)]
 pub struct PositiveReal {
@@ -16,7 +18,7 @@ impl PositiveReal {
 
   pub const MAX: Self = Self::new_unchecked(Real::MAX);
 
-  pub fn new(real: Real) -> Option<Self> { (real > 0.0).then_some(Self { inner: real }) }
+  pub fn new(real: Real) -> Option<Self> { (real > 0.0).then(|| Self::new_unchecked(real)) }
 
   pub const fn new_unchecked(real: Real) -> Self { Self { inner: real } }
 

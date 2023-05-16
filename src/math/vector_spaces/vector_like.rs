@@ -20,6 +20,8 @@ where
 
   fn dot(&self, other: &Self) -> Real;
 
+  fn abs_dot(&self, other: &Self) -> Real { self.dot(other).abs() }
+
   fn normalize(&self) -> UnitVector<D, S>;
 
   fn normalize_fast(&self) -> UnitVector<D, S>;

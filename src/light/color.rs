@@ -93,7 +93,3 @@ impl From<na::Vector3<Real>> for Color {
 impl From<Color> for na::Vector3<Real> {
   fn from(val: Color) -> Self { val.inner }
 }
-
-// impl Wrapper<na::Vector3<Real>> for Color {
-//   fn inner(&self) -> &na::Vector3<Real> { &self.inner }
-// }

@@ -26,6 +26,7 @@ pub struct ImageTexture {
 impl ImageTexture {}
 
 impl Texture for ImageTexture {
+  // TODO: Bilinear interpolation
   fn value(&self, uv: &TextureCoordinate) -> Color {
     let w = self.image.width();
     let x = (uv[0] * (w as Real)).clamp(0.0, (w - 1) as Real) as u32;
