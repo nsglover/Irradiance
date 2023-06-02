@@ -1,7 +1,7 @@
 use nalgebra::{Const, ToTypenum};
 
 use super::*;
-use crate::{common::Wrapper, raytracing::*};
+use crate::raytracing::*;
 
 #[derive(Debug, Clone)]
 pub struct BoundingBox<const D: usize, S: Space<D>>

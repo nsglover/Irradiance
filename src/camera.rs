@@ -1,7 +1,6 @@
 use serde::Deserialize;
 
 use crate::{
-  common::Wrapper,
   math::*,
   raytracing::*,
   sampling::{uniform_random_in_unit_disc, Sampler}

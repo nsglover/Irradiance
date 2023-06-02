@@ -113,8 +113,8 @@ pub fn uniform_random_on_unit_sphere<S: Space<3>>(s: &mut dyn Sampler) -> UnitVe
   spherical_to_cartesian(s.random_in_closed_open(0.0, 2.0 * PI), s.random_in_closed(-1.0, 1.0))
 }
 
-// pub fn uniform_random_on_unit_hemisphere<S: Space<3>>(s: &mut dyn Sampler) -> Direction3<S> {
-//   spherical_to_cartesian(s.random_in_closed_open(0.0, 2.0 * PI), s.next())
+// pub fn uniform_random_on_unit_hemisphere<S: Space<3>>(s: &mut dyn Sampler) -> UnitVector3<S> {
+//   spherical_to_cartesian(s.random_in_closed_open(0.0, 2.0 * PI), s.next().into_inner())
 // }
 
 // pub fn cosine_random_on_unit_hemisphere<S: Space<3>>(s: &mut dyn Sampler) -> Direction3<S> {

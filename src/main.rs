@@ -1,20 +1,18 @@
-#![feature(never_type)]
-
 use std::{error::Error, fs::File, io::BufReader, time::Duration};
 
 use clap::Parser;
 use renderer::Renderer;
 
 mod camera;
-mod common;
 mod integrators;
-mod light;
+mod lights;
 mod materials;
 mod math;
 mod raytracing;
 mod renderer;
 mod sampling;
 mod scene;
+mod spectrum;
 mod surfaces;
 mod textures;
 
@@ -28,29 +26,26 @@ mod textures;
 // TODO: Allow rays to carry more information
 // TODO: Stratified sampling
 // TODO: Direct-lighting MIS and mixture sampling
-// TODO: Generalize MIS and mixture integrators to work with any number of arbitrary integrators
 // TODO: Interfering mediums
-// TODO: Even fancier integrators
+// TODO: Fourier materials
+// TODO: Fancier integrators
 
 // Major Optimizations:
-// TODO: Use SIMD? Also a SIMD BVH?
-// TODO: Investigate the performance disparity and fix it
-// TODO: GPU? Probably not, but one can hope
+// TODO: Add an embree BVH surface
+// TODO: GPU acceleration
 
 // Minor Features:
 // TODO: Perlin noise texture
 // TODO: All the PA2 materials
-// TODO: Blend material (from any number of materials, which can be implemented using the original
-//       one that just works for two.)
 // TODO: Environment map
 
 // Minor Code Improvements:
 // TODO: Move camera into scene, make samples-per-pixel an integrator-specific thing
 // TODO: Allow user to customize whether we use BVH or surface list for the emissive partition
-// TODO: Better distinction between emissive and non-emissive things
-// TODO: Better distinction between directions and surface normals
 // TODO: All parameter structs should be consumed upon building their target
+// TODO: Put parsing in it's own place
 // TODO: Make a progress bar wrapper
+// TODO: No more mutating rays in intersect_world_ray
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = Some(""))]

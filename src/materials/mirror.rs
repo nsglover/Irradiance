@@ -3,13 +3,7 @@ use std::sync::Arc;
 use serde::Deserialize;
 
 use super::*;
-use crate::{
-  light::Color,
-  math::{WorldPoint, WorldUnitVector},
-  raytracing::*,
-  sampling::*,
-  textures::*
-};
+use crate::{math::WorldUnitVector, raytracing::*, sampling::*, spectrum::Spectrum, textures::*};
 
 #[derive(Debug, Deserialize)]
 struct MirrorParameters {
@@ -37,7 +31,7 @@ impl DiscreteRandomVariable for ReflectRandomVariable {
   type Sample = WorldUnitVector;
 
   fn sample(&self, (hit, out_dir): &Self::Param, _: &mut dyn Sampler) -> Option<WorldUnitVector> {
-    Some(out_dir.reflect_about(hit.geometric_normal))
+    Some(out_dir.reflect_about(hit.shading_normal))
   }
 }
 
@@ -48,18 +42,9 @@ pub struct Mirror {
 }
 
 impl Material for Mirror {
-  fn emitted(&self, _: &WorldSurfaceInterface) -> Option<Color> { None }
-
-  fn bsdf_cos(&self, hit: &WorldSurfacePoint, _: &WorldUnitVector, _: &WorldUnitVector) -> Color {
+  fn bsdf_cos(&self, hit: &WorldSurfacePoint, _: &WorldUnitVector, _: &WorldUnitVector) -> Spectrum {
     self.albedo.value(&hit.tex_coord)
   }
 
-  fn scatter_random_variable(&self) -> Option<&ScatterRandomVariable> { Some(&self.scatter_random_var) }
-
-  fn emit_random_variable(
-    &self
-  ) -> Option<&dyn ContinuousRandomVariable<Param = (WorldPoint, WorldUnitVector), Sample = (WorldUnitVector, Color)>>
-  {
-    None
-  }
+  fn random_bsdf_in_direction(&self) -> &ScatterRandomVariable { &self.scatter_random_var }
 }

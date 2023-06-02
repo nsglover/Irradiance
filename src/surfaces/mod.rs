@@ -1,5 +1,4 @@
 mod bvh;
-mod emission;
 mod mesh;
 mod quad;
 mod sphere;
@@ -11,13 +10,14 @@ pub use mesh::*;
 pub use surface::*;
 
 use self::surface_list::SurfaceListParameters;
-use crate::{materials::Material, BuildSettings};
+use crate::{lights::Light, materials::Material, BuildSettings};
 
 pub fn default_grouping(
   surfaces: Vec<Box<dyn SurfaceParameters>>,
+  lights: &std::collections::HashMap<String, std::sync::Arc<dyn Light>>,
   materials: &std::collections::HashMap<String, std::sync::Arc<dyn Material>>,
   meshes: &std::collections::HashMap<String, Mesh>,
   settings: BuildSettings
 ) -> Box<dyn Surface> {
-  (SurfaceListParameters { surfaces }).build_surface(materials, meshes, settings)
+  (SurfaceListParameters { surfaces }).build_surface(lights, materials, meshes, settings)
 }

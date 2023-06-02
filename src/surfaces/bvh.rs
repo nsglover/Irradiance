@@ -1,12 +1,12 @@
-use std::{collections::HashMap, sync::Arc, time::Duration};
+use std::{sync::Arc, time::Duration};
 
 use indicatif::{ProgressBar, ProgressDrawTarget, ProgressStyle};
 use rand::{distributions::Uniform, Rng};
 use serde_derive::Deserialize;
 
-use super::{emission::UniformChoiceEmittedRayRandomVariable, surface_list::*, *};
+use super::{surface_list::*, *};
 use crate::{
-  duration_to_hms, light::Color, materials::Material, math::*, raytracing::*, sampling::ContinuousRandomVariable,
+  duration_to_hms, lights::Light, materials::Material, math::*, raytracing::*, sampling::ContinuousRandomVariable,
   surfaces::Surface, BuildSettings
 };
 
@@ -16,7 +16,7 @@ pub enum PartitionStrategy {
   SurfaceAreaHeuristic,
 
   #[serde(alias = "random")]
-  Random
+  RandomAxisEvenSplit
 }
 
 #[derive(Debug, Deserialize)]
@@ -35,21 +35,20 @@ pub struct BvhParameters {
 impl SurfaceParameters for BvhParameters {
   fn build_surface(
     &self,
+    lights: &std::collections::HashMap<String, Arc<dyn Light>>,
     materials: &std::collections::HashMap<String, Arc<dyn Material>>,
     meshes: &std::collections::HashMap<String, Mesh>,
     settings: BuildSettings
   ) -> Box<dyn Surface> {
     Box::new(BoundingVolumeHierarchy::build(
-      self.surfaces.iter().map(|s| s.build_surface(materials, meshes, settings)).collect(),
+      self.surfaces.iter().map(|s| s.build_surface(lights, materials, meshes, settings)).collect(),
       self.partition_strategy,
       self.max_leaf_primitives,
       settings
     ))
   }
 
-  fn is_emissive(&self, materials: &HashMap<String, Arc<dyn Material>>) -> bool {
-    self.surfaces.iter().any(|s| s.is_emissive(materials))
-  }
+  fn has_light(&self) -> bool { self.surfaces.iter().any(|s| s.has_light()) }
 }
 
 #[derive(Debug)]
@@ -76,14 +75,14 @@ impl BvhNode {
           ) {
             (None, maybe_hit) | (maybe_hit, None) => {
               if let Some(hit) = maybe_hit.as_ref() {
-                ray.set_max_intersect_time(hit.time);
+                ray.set_max_intersect_dist(hit.intersect_dist);
               }
 
               maybe_hit
             },
             (Some(left_hit), Some(right_hit)) => {
-              let hit = if left_hit.time < right_hit.time { left_hit } else { right_hit };
-              ray.set_max_intersect_time(hit.time);
+              let hit = if left_hit.intersect_dist < right_hit.intersect_dist { left_hit } else { right_hit };
+              ray.set_max_intersect_dist(hit.intersect_dist);
               Some(hit)
             }
           }
@@ -97,8 +96,7 @@ impl BvhNode {
 
 #[derive(Debug)]
 pub struct BoundingVolumeHierarchy {
-  root_node: BvhNode,
-  emitted_ray_random_var: UniformChoiceEmittedRayRandomVariable
+  root_node: BvhNode
 }
 
 impl BoundingVolumeHierarchy {
@@ -207,7 +205,7 @@ impl BoundingVolumeHierarchy {
             left_surfaces = left_iter.collect();
           }
         },
-        PartitionStrategy::Random => {
+        PartitionStrategy::RandomAxisEvenSplit => {
           let axis = rand::thread_rng().sample(Uniform::new(0, 3));
           let num_left = num_surfaces / 2;
 
@@ -261,15 +259,10 @@ impl BoundingVolumeHierarchy {
       progress_bar
     });
 
-    let (root_node, leaves) =
+    let (root_node, _) =
       Self::build_node(surfaces, partition_strategy, max_leaf_primitives, maybe_progress_bar.clone()).unwrap();
 
-    let s = Self {
-      root_node,
-      emitted_ray_random_var: UniformChoiceEmittedRayRandomVariable::new(
-        leaves.into_iter().map(|s| s as Arc<dyn Surface>).collect()
-      )
-    };
+    let s = Self { root_node };
 
     if let Some(progress_bar) = maybe_progress_bar {
       progress_bar.finish();
@@ -282,11 +275,15 @@ impl BoundingVolumeHierarchy {
 impl Surface for BoundingVolumeHierarchy {
   fn intersect_world_ray(&self, ray: &mut WorldRay) -> Option<WorldSurfaceInterface> { self.root_node.intersect(ray) }
 
-  fn world_bounding_box(&self) -> WorldBoundingBox { self.root_node.bounding_box.clone() }
-
-  fn emitted_ray_random_variable(&self) -> &dyn ContinuousRandomVariable<Param = (), Sample = (WorldRay, Color)> {
-    &self.emitted_ray_random_var
+  fn random_surface_interface(&self) -> &dyn ContinuousRandomVariable<Param = (), Sample = WorldSurfaceInterface> {
+    todo!()
   }
 
-  fn num_subsurfaces(&self) -> usize { self.emitted_ray_random_var.num_surfaces() }
+  fn random_intersecting_direction(
+    &self
+  ) -> &dyn ContinuousRandomVariable<Param = WorldPoint, Sample = WorldUnitVector> {
+    todo!()
+  }
+
+  fn world_bounding_box(&self) -> &WorldBoundingBox { &self.root_node.bounding_box }
 }

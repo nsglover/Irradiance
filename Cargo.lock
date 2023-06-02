@@ -499,6 +499,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "irradiance"
+version = "0.0.1"
+dependencies = [
+ "clap",
+ "derive_more",
+ "image",
+ "indicatif",
+ "nalgebra",
+ "rand",
+ "serde",
+ "serde_derive",
+ "serde_json",
+ "threadpool",
+ "tobj",
+ "typetag",
+]
+
+[[package]]
 name = "is-terminal"
 version = "0.4.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -716,24 +734,6 @@ name = "paste"
 version = "1.0.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9f746c4065a8fa3fe23974dd82f15431cc8d40779821001404d10d2e79ca7d79"
-
-[[package]]
-name = "pbr-project"
-version = "0.0.1"
-dependencies = [
- "clap",
- "derive_more",
- "image",
- "indicatif",
- "nalgebra",
- "rand",
- "serde",
- "serde_derive",
- "serde_json",
- "threadpool",
- "tobj",
- "typetag",
-]
 
 [[package]]
 name = "pin-project"

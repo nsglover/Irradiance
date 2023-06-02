@@ -17,7 +17,7 @@ impl Scene {
     let mut closest = None;
     for p in 0..NUM_PARTS {
       if let Some(hit) = self.surface_partition[p].intersect_world_ray(&mut ray) {
-        ray.set_max_intersect_time(hit.time);
+        ray.set_max_intersect_dist(hit.intersect_dist);
         closest = Some(hit);
       }
     }

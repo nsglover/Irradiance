@@ -14,11 +14,12 @@ use crate::{
   camera::*,
   duration_to_hms,
   integrators::*,
-  light::*,
+  lights::LightParameters,
   materials::MaterialParameters,
   math::*,
   sampling::*,
   scene::Scene,
+  spectrum::*,
   surfaces::{self, MeshParameters, SurfaceParameters},
   BuildSettings, RenderSettings
 };
@@ -30,6 +31,9 @@ pub struct SceneParameters {
 
   #[serde(alias = "camera")]
   pub camera_params: CameraParameters,
+
+  #[serde(alias = "lights", default)]
+  pub light_params: Vec<Box<dyn LightParameters>>,
 
   #[serde(alias = "materials", default)]
   pub material_params: Vec<Box<dyn MaterialParameters>>,
@@ -47,7 +51,7 @@ pub struct SceneParameters {
 pub struct Renderer {
   samples_per_pixel: usize,
   camera: Arc<Camera>,
-  integrators: Arc<Vec<Box<dyn Integrator>>>
+  integrator: Arc<Box<dyn Integrator>>
 }
 
 type Image = ImageBuffer<Rgb<u8>, Vec<u8>>;
@@ -57,13 +61,15 @@ impl Renderer {
     let SceneParameters {
       samples_per_pixel,
       camera_params,
+      light_params,
       material_params,
       mesh_params,
       surface_params,
       integrator_params
     } = params;
 
-    // Build materials
+    // Build lights and materials
+    let lights = light_params.into_iter().map(|p| (p.name(), p.build_light())).collect();
     let materials = material_params.into_iter().map(|p| (p.name(), p.build_material())).collect();
 
     // Load meshes from files
@@ -71,18 +77,19 @@ impl Renderer {
 
     // Partition surfaces based on whether they are emissive
     let (emissive_surface_params, non_emissive_surface_params) =
-      surface_params.into_iter().partition(|s| s.is_emissive(&materials));
-    let non_emissive_surface = surfaces::default_grouping(non_emissive_surface_params, &materials, &meshes, settings);
-    let emissive_surface = surfaces::default_grouping(emissive_surface_params, &materials, &meshes, settings);
+      surface_params.into_iter().partition(|s| s.has_light());
+    let non_emissive_surface =
+      surfaces::default_grouping(non_emissive_surface_params, &lights, &materials, &meshes, settings);
+    let emissive_surface = surfaces::default_grouping(emissive_surface_params, &lights, &materials, &meshes, settings);
 
     // Build the scene from the surface partition
     let scene = Scene::new(non_emissive_surface, emissive_surface);
 
     // Build integrator from scene
-    let integrators = integrator_params.build_integrators(scene, settings)?;
+    let integrator = integrator_params.build_integrator(scene, settings)?;
 
     // Return the scene with its camera
-    Ok(Self { samples_per_pixel, camera: Arc::new(camera_params.build_camera()), integrators: Arc::new(integrators) })
+    Ok(Self { samples_per_pixel, camera: Arc::new(camera_params.build_camera()), integrator: Arc::new(integrator) })
   }
 
   pub fn render(&self, settings: RenderSettings) -> DynamicImage {
@@ -140,7 +147,7 @@ impl Renderer {
       // Send the render job to the threadpool
       Self::async_integrate_subimage(
         &thread_pool,
-        &self.integrators,
+        &self.integrator,
         &self.camera,
         self.samples_per_pixel,
         &image_lock,
@@ -182,14 +189,14 @@ impl Renderer {
 
   fn async_integrate_subimage(
     thread_pool: &ThreadPool,
-    integrators: &Arc<Vec<Box<dyn Integrator>>>,
+    integrator: &Arc<Box<dyn Integrator>>,
     camera: &Arc<Camera>,
     samples_per_pixel: usize,
     image_lock: &Arc<Mutex<Image>>,
     ((sub_x, sub_y), (sub_w, sub_h)): ((u32, u32), (u32, u32))
   ) {
     // Copy the ARCs.
-    let integrators = integrators.clone();
+    let integrator = integrator.clone();
     let camera = camera.clone();
     let image_lock = image_lock.clone();
 
@@ -199,7 +206,7 @@ impl Renderer {
       let mut subimage = Image::new(sub_w, sub_h);
 
       // Precompute divisions to save some time.
-      let inv_num_samples = 1.0 / ((samples_per_pixel * integrators.len()) as Real);
+      let inv_num_samples = 1.0 / (samples_per_pixel as Real);
 
       // Build samplers for this subimage thread.
       let mut ray_sampler = IndependentSampler::new();
@@ -209,17 +216,15 @@ impl Renderer {
       // incoming radiance along those rays.
       for x in 0..sub_w {
         for y in 0..sub_h {
-          let mut light = Color::black();
+          let mut light = Spectrum::none();
           for _ in 0..samples_per_pixel {
-            for integrator in integrators.iter() {
-              // Generate a slightly jittered ray through pixel (x, y).
-              let ray_x = ray_sampler.next() + (sub_x + x) as Real;
-              let ray_y = ray_sampler.next() + (sub_y + y) as Real;
-              let ray = camera.sample_ray_through_pixel(&mut ray_sampler, ray_x, ray_y);
+            // Generate a slightly jittered ray through pixel (x, y).
+            let ray_x = ray_sampler.next() + (sub_x + x) as Real;
+            let ray_y = ray_sampler.next() + (sub_y + y) as Real;
+            let ray = camera.sample_ray_through_pixel(&mut ray_sampler, ray_x, ray_y);
 
-              // Add the incoming radiance to our running average.
-              light += integrator.radiance_estimate(&mut integrator_sampler, ray);
-            }
+            // Add the incoming radiance to our running average.
+            light += integrator.radiance_estimate(&mut integrator_sampler, ray);
           }
 
           // Convert to sRGB, which is the color space expected by the image buffer

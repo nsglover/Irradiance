@@ -3,7 +3,7 @@ use std::sync::Arc;
 use serde::Deserialize;
 
 use super::{Texture, TextureCoordinate, TextureParameters};
-use crate::light::*;
+use crate::spectrum::*;
 
 #[derive(Debug, Clone, Copy, Deserialize)]
 pub struct ConstantTextureParameters {
@@ -17,13 +17,13 @@ impl TextureParameters for ConstantTextureParameters {
 
 #[derive(Debug)]
 pub struct ConstantTexture {
-  color: Color
+  color: Spectrum
 }
 
 impl ConstantTexture {
-  pub fn new(color: Color) -> Self { Self { color } }
+  pub fn new(color: Spectrum) -> Self { Self { color } }
 }
 
 impl Texture for ConstantTexture {
-  fn value(&self, _: &TextureCoordinate) -> Color { self.color }
+  fn value(&self, _: &TextureCoordinate) -> Spectrum { self.color }
 }

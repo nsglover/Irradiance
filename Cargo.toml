@@ -1,5 +1,5 @@
 [package]
-name = "pbr-project"
+name = "irradiance"
 version = "0.0.1"
 edition = "2021"
 
@@ -16,5 +16,5 @@ serde = "1.0.159"
 serde_derive = "1.0.159"
 serde_json = "1.0.95"
 threadpool = "1.8.1"
-tobj = { version = "3.2.5", features = ["use_f64", "reordering"] }
+tobj = { version = "3.2.5", features = ["use_f64"] }
 typetag = "0.2.7"

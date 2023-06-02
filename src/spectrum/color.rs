@@ -12,23 +12,25 @@ pub enum ColorParameters {
 }
 
 impl ColorParameters {
-  pub fn build_color(self) -> Color {
+  pub fn build_color(self) -> Spectrum {
     match self {
-      ColorParameters::Array([r, g, b]) => Color::new(r, g, b),
-      ColorParameters::Single(c) => Color::new(c, c, c)
+      ColorParameters::Array([r, g, b]) => Spectrum::new(r, g, b),
+      ColorParameters::Single(c) => Spectrum::new(c, c, c)
     }
   }
 }
 
 #[derive(Debug, Clone, Copy, Add, AddAssign, Mul, MulAssign, Div, DivAssign)]
-pub struct Color {
+pub struct Spectrum {
   pub inner: na::Vector3<Real>
 }
 
-impl Color {
+impl Spectrum {
   pub fn new(r: Real, g: Real, b: Real) -> Self { Self { inner: na::Vector3::new(r, g, b) } }
 
-  pub fn black() -> Self { na::Vector3::new(0.0, 0.0, 0.0).into() }
+  pub fn none() -> Self { na::Vector3::new(0.0, 0.0, 0.0).into() }
+
+  pub fn black() -> Self { Self::none() }
 
   pub fn white() -> Self { na::Vector3::new(1.0, 1.0, 1.0).into() }
 
@@ -66,30 +68,30 @@ impl Color {
   }
 }
 
-impl std::ops::Mul for Color {
-  type Output = Color;
+impl std::ops::Mul for Spectrum {
+  type Output = Spectrum;
 
   fn mul(self, rhs: Self) -> Self::Output { self.inner.component_mul(&rhs.inner).into() }
 }
 
-impl std::ops::MulAssign for Color {
+impl std::ops::MulAssign for Spectrum {
   fn mul_assign(&mut self, rhs: Self) { self.inner.component_mul_assign(&rhs.inner) }
 }
 
-impl std::ops::Div for Color {
-  type Output = Color;
+impl std::ops::Div for Spectrum {
+  type Output = Spectrum;
 
   fn div(self, rhs: Self) -> Self::Output { self.inner.component_div(&rhs.inner).into() }
 }
 
-impl std::ops::DivAssign for Color {
+impl std::ops::DivAssign for Spectrum {
   fn div_assign(&mut self, rhs: Self) { self.inner.component_div_assign(&rhs.inner) }
 }
 
-impl From<na::Vector3<Real>> for Color {
+impl From<na::Vector3<Real>> for Spectrum {
   fn from(raw: na::Vector3<Real>) -> Self { Self { inner: raw } }
 }
 
-impl From<Color> for na::Vector3<Real> {
-  fn from(val: Color) -> Self { val.inner }
+impl From<Spectrum> for na::Vector3<Real> {
+  fn from(val: Spectrum) -> Self { val.inner }
 }

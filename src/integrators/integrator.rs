@@ -1,21 +1,17 @@
 use std::{error::Error, fmt::Debug};
 
-use crate::{light::*, math::PositiveReal, raytracing::*, sampling::Sampler, scene::Scene, BuildSettings};
+use crate::{math::PositiveReal, raytracing::*, sampling::Sampler, scene::Scene, spectrum::*, BuildSettings};
 
 #[typetag::deserialize(tag = "type")]
 pub trait IntegratorParameters: Debug {
-  fn build_integrators(
-    &self,
-    scene: Scene,
-    settings: BuildSettings
-  ) -> Result<Vec<Box<dyn Integrator>>, Box<dyn Error>>;
+  fn build_integrator(&self, scene: Scene, settings: BuildSettings) -> Result<Box<dyn Integrator>, Box<dyn Error>>;
 }
 
 #[typetag::deserialize(tag = "type")]
 pub trait PathTraceIntegratorParameters: IntegratorParameters {}
 
 pub trait Integrator: Send + Sync {
-  fn radiance_estimate(&self, sampler: &mut dyn Sampler, ray: WorldRay) -> Color;
+  fn radiance_estimate(&self, sampler: &mut dyn Sampler, ray: WorldRay) -> Spectrum;
 }
 
 pub trait PathTraceIntegrator {
@@ -26,14 +22,14 @@ pub trait PathTraceIntegrator {
     &self,
     sampler: &mut dyn Sampler,
     ray: WorldRay
-  ) -> Result<(Color, Color, WorldRay, Option<PositiveReal>), Color>;
+  ) -> Result<(Spectrum, Spectrum, WorldRay, Option<PositiveReal>), Spectrum>;
 }
 
 impl<T: PathTraceIntegrator + Send + Sync> Integrator for T {
-  fn radiance_estimate(&self, sampler: &mut dyn Sampler, ray: WorldRay) -> Color {
+  fn radiance_estimate(&self, sampler: &mut dyn Sampler, ray: WorldRay) -> Spectrum {
     let mut terminator = self.initial_path_terminator(ray);
-    let mut total_path_attenuation = Color::white();
-    let mut radiance = Color::black();
+    let mut total_path_attenuation = Spectrum::white();
+    let mut radiance = Spectrum::none();
 
     while let Some((ray, survival_probability, cont)) = terminator.into_ray(sampler) {
       match self.sample_scatter(sampler, ray) {

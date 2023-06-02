@@ -4,7 +4,7 @@ use image::{io::Reader, ImageBuffer, Rgb};
 use serde::Deserialize;
 
 use super::{Texture, TextureCoordinate, TextureParameters};
-use crate::{light::*, math::Real};
+use crate::{math::Real, spectrum::*};
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct ImageTextureParameters {
@@ -27,13 +27,13 @@ impl ImageTexture {}
 
 impl Texture for ImageTexture {
   // TODO: Bilinear interpolation
-  fn value(&self, uv: &TextureCoordinate) -> Color {
+  fn value(&self, uv: &TextureCoordinate) -> Spectrum {
     let w = self.image.width();
     let x = (uv[0] * (w as Real)).clamp(0.0, (w - 1) as Real) as u32;
 
     let h = self.image.height();
     let y = (uv[1] * (h as Real)).clamp(0.0, (h - 1) as Real) as u32;
 
-    Color::from_bytes(self.image.get_pixel(x, y).0)
+    Spectrum::from_bytes(self.image.get_pixel(x, y).0)
   }
 }

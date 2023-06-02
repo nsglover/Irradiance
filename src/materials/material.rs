@@ -1,11 +1,6 @@
 use std::{fmt::Debug, sync::Arc};
 
-use crate::{
-  light::*,
-  math::*,
-  raytracing::*,
-  sampling::{ContinuousRandomVariable, RandomVariable}
-};
+use crate::{math::*, raytracing::*, sampling::RandomVariable, spectrum::*};
 
 #[typetag::deserialize(tag = "type")]
 pub trait MaterialParameters: Debug {
@@ -17,17 +12,11 @@ pub trait MaterialParameters: Debug {
 pub type ScatterRandomVariable = RandomVariable<(WorldSurfacePoint, WorldUnitVector), WorldUnitVector>;
 
 pub trait Material: Debug {
-  fn emitted(&self, hit: &WorldSurfaceInterface) -> Option<Color>;
-
-  fn bsdf(&self, point: &WorldSurfacePoint, in_dir: &WorldUnitVector, out_dir: &WorldUnitVector) -> Color {
+  fn bsdf(&self, point: &WorldSurfacePoint, in_dir: &WorldUnitVector, out_dir: &WorldUnitVector) -> Spectrum {
     self.bsdf_cos(point, in_dir, out_dir) / point.shading_normal.abs_dot(in_dir)
   }
 
-  fn bsdf_cos(&self, point: &WorldSurfacePoint, in_dir: &WorldUnitVector, out_dir: &WorldUnitVector) -> Color;
+  fn bsdf_cos(&self, point: &WorldSurfacePoint, in_dir: &WorldUnitVector, out_dir: &WorldUnitVector) -> Spectrum;
 
-  fn scatter_random_variable(&self) -> Option<&ScatterRandomVariable>;
-
-  fn emit_random_variable(
-    &self
-  ) -> Option<&dyn ContinuousRandomVariable<Param = (WorldPoint, WorldUnitVector), Sample = (WorldUnitVector, Color)>>;
+  fn random_bsdf_in_direction(&self) -> &ScatterRandomVariable;
 }

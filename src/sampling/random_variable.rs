@@ -14,7 +14,7 @@ pub trait ContinuousRandomVariable: Debug {
   type Sample;
 
   fn sample(&self, param: &Self::Param, sampler: &mut dyn Sampler) -> Option<Self::Sample> {
-    self.sample_with_pdf(param, sampler).map(|(s, _)| s)
+    self.sample_with_pdf(param, sampler).map(|(sample, _)| sample)
   }
 
   fn sample_with_pdf(&self, param: &Self::Param, sampler: &mut dyn Sampler) -> Option<(Self::Sample, PositiveReal)>;

@@ -7,9 +7,9 @@
 		},
 		"field-of-view": 40,
 		"focal-distance": 800,
-    "resolution": [1024, 1024]
+    "resolution": [2048, 2048]
 	},
-	"samples-per-pixel": 2048,
+	"samples-per-pixel": 8192,
 	"background": [0,0,0],
   "integrator":
   {

@@ -1,10 +1,21 @@
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 
 use serde::Deserialize;
 use tobj::LoadOptions;
 
-use super::triangle::TriangleSurface;
-use crate::{materials::Material, math::*, textures::TextureCoordinate};
+use super::{
+  bvh::{BoundingVolumeHierarchy, PartitionStrategy},
+  triangle::TriangleSurface,
+  Surface
+};
+use crate::{
+  lights::{Light, NullLight},
+  materials::{Material, NullMaterial},
+  math::*,
+  surfaces::SurfaceParameters,
+  textures::TextureCoordinate,
+  BuildSettings
+};
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct MeshParameters {
@@ -17,20 +28,14 @@ impl MeshParameters {
     println!("Loading mesh from \"{}\"...", self.filename);
     let mut raw_meshes = tobj::load_obj(
       self.filename,
-      &LoadOptions {
-        single_index: false,
-        triangulate: true,
-        ignore_points: true,
-        ignore_lines: true,
-        reorder_data: false
-      }
+      &LoadOptions { single_index: false, triangulate: true, ignore_points: true, ignore_lines: true }
     )
     .expect("Mesh file not found!")
     .0;
 
     // TODO: Replace this panic and many others with proper error handling
     if raw_meshes.len() != 1 {
-      panic!("Meshes with more than one model are not currently supporsed!")
+      panic!("Meshes with more than one model are not currently supported!")
     }
 
     let raw_mesh = raw_meshes.remove(0).mesh;
@@ -113,7 +118,12 @@ pub struct Mesh {
 }
 
 impl Mesh {
-  pub fn to_triangles(&self, transform: LocalToWorld<MeshSpace>, material: Arc<dyn Material>) -> Vec<TriangleSurface> {
+  pub fn to_triangles(
+    &self,
+    transform: LocalToWorld<MeshSpace>,
+    light: Arc<dyn Light>,
+    material: Arc<dyn Material>
+  ) -> Vec<TriangleSurface> {
     (0..self.indices.len())
       .collect::<Vec<_>>()
       .chunks_exact(3)
@@ -143,11 +153,52 @@ impl Mesh {
             (tex_coords[ti0], tex_coords[ti1], tex_coords[ti2])
           });
 
-          TriangleSurface::new(vertices, normals, tex_coords, material.clone())
+          TriangleSurface::new(light.clone(), material.clone(), vertices, normals, tex_coords)
         } else {
           panic!("chunks_exact didn't work!")
         }
       })
       .collect()
   }
+}
+
+#[derive(Debug, Deserialize)]
+pub struct TriangleMeshSurfaceParameters {
+  transform: TransformParameters,
+  mesh: String,
+  light: Option<String>,
+  material: Option<String>
+}
+
+#[typetag::deserialize(name = "mesh")]
+impl SurfaceParameters for TriangleMeshSurfaceParameters {
+  fn build_surface(
+    &self,
+
+    lights: &HashMap<String, Arc<dyn Light>>,
+    materials: &HashMap<String, Arc<dyn Material>>,
+    meshes: &HashMap<String, Mesh>,
+    settings: BuildSettings
+  ) -> Box<dyn Surface> {
+    let triangles = meshes
+      .get(&self.mesh)
+      .unwrap()
+      .to_triangles(
+        self.transform.clone().build_transform(),
+        self.light.as_ref().map(|l| lights.get(l).unwrap().clone()).unwrap_or(Arc::new(NullLight::default())).clone(),
+        self
+          .material
+          .as_ref()
+          .map(|m| materials.get(m).unwrap().clone())
+          .unwrap_or(Arc::new(NullMaterial::default()))
+          .clone()
+      )
+      .into_iter()
+      .map(|t| Box::new(t) as Box<dyn Surface>)
+      .collect();
+
+    Box::new(BoundingVolumeHierarchy::build(triangles, PartitionStrategy::SurfaceAreaHeuristic, 3, settings))
+  }
+
+  fn has_light(&self) -> bool { self.light.is_some() }
 }

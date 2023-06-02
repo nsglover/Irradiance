@@ -4,7 +4,6 @@ use nalgebra as na;
 use nalgebra::{Const, ToTypenum};
 
 use super::super::{phantom::Phantom, *};
-use crate::common::Wrapper;
 
 #[derive(Debug, Clone, Copy)]
 pub struct UnitVector<const D: usize, S: Space<D>>

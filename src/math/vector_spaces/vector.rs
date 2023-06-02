@@ -4,7 +4,6 @@ use derive_more::*;
 use nalgebra as na;
 
 use super::super::{phantom::*, *};
-use crate::common::Wrapper;
 
 #[derive(Debug, Clone, Copy, Mul, MulAssign, Div, DivAssign)]
 pub struct Vector<const D: usize, S: Space<D>>

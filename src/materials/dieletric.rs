@@ -3,7 +3,7 @@ use std::{ops::Neg, sync::Arc};
 use serde::Deserialize;
 
 use super::*;
-use crate::{common::Wrapper, light::Color, math::*, raytracing::*, sampling::*, textures::*};
+use crate::{math::*, raytracing::*, sampling::*, spectrum::Spectrum, textures::*};
 
 #[derive(Debug, Deserialize)]
 struct DieletricParameters {
@@ -41,7 +41,7 @@ impl DiscreteRandomVariable for RefractRandomVariable {
     sampler: &mut dyn Sampler
   ) -> Option<WorldUnitVector> {
     // Ensure normal and IOR are correctly oriented (i.e. for whether ray is entering or exiting)
-    let mut normal = hit.geometric_normal;
+    let mut normal = hit.shading_normal;
     let mut eta_in = 1.0;
     let mut eta_out = self.index_of_refraction;
     if out_dir.dot(&normal) < 0.0 {
@@ -79,7 +79,6 @@ pub struct Dieletric {
   scatter_random_var: ScatterRandomVariable
 }
 
-// TODO: Document this and move it to math module
 fn refract<S: Space<3>>(
   d: &UnitVector3<S>,
   normal: UnitVector3<S>,
@@ -98,19 +97,9 @@ fn refract<S: Space<3>>(
 }
 
 impl Material for Dieletric {
-  fn emitted(&self, _: &WorldSurfaceInterface) -> Option<Color> { None }
-
-  fn bsdf_cos(&self, hit: &WorldSurfacePoint, _: &WorldUnitVector, _: &WorldUnitVector) -> Color {
-    // TODO: Do we need to multiply by Fr or (1 - Fr)? If so, I should introduce a PMF
+  fn bsdf_cos(&self, hit: &WorldSurfacePoint, _: &WorldUnitVector, _: &WorldUnitVector) -> Spectrum {
     self.albedo.value(&hit.tex_coord)
   }
 
-  fn scatter_random_variable(&self) -> Option<&ScatterRandomVariable> { Some(&self.scatter_random_var) }
-
-  fn emit_random_variable(
-    &self
-  ) -> Option<&dyn ContinuousRandomVariable<Param = (WorldPoint, WorldUnitVector), Sample = (WorldUnitVector, Color)>>
-  {
-    None
-  }
+  fn random_bsdf_in_direction(&self) -> &ScatterRandomVariable { &self.scatter_random_var }
 }
